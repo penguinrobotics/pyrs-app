@@ -56,6 +56,7 @@ const RefereePage = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [removeViolationData, setRemoveViolationData] = useState(null);
+  const [mounted, setMounted] = useState(false);
 
   const [formData, setFormData] = useState({
     team: "",
@@ -65,6 +66,7 @@ const RefereePage = () => {
   });
 
   useEffect(() => {
+    setMounted(true);
     const getTeams = async () => {
       const res = await fetch(`/api/teams`);
       const teamsData = await res.json();
@@ -148,7 +150,7 @@ const RefereePage = () => {
     setRemoveViolationData(null);
   };
 
-  const badTeams = new Set(violations.map(violation => violation.number));
+  const badTeams = mounted ? new Set(violations.map(violation => violation.number)) : new Set();
 
   return (
     <>
@@ -244,7 +246,7 @@ const RefereePage = () => {
                 <Select.Trigger />
                 <Select.Content>
                   <Select.Item value="All">All</Select.Item>
-                  {[...badTeams].map((teamNumber) => (
+                  {mounted && [...badTeams].map((teamNumber) => (
                     <Select.Item key={teamNumber} value={teamNumber}>
                       {teamNumber}
                     </Select.Item>
@@ -261,7 +263,7 @@ const RefereePage = () => {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {formData.index === "All"
+                  {mounted && (formData.index === "All"
                     ? violations.map((team, index) => (
                       <Table.Row key={index}>
                         <Table.Cell>
@@ -330,7 +332,7 @@ const RefereePage = () => {
                               variant="outline"
                               size="1"
                               onClick={() =>
-                                RemoveViolation(
+                                handleRemoveClick(
                                   team.number,
                                   team.ruleId,
                                   team.severity
@@ -341,7 +343,7 @@ const RefereePage = () => {
                             </Button>
                           </Table.Cell>
                         </Table.Row>
-                      ))}
+                      )))}
                 </Table.Body>
               </Table.Root>
             </Flex>
@@ -357,12 +359,12 @@ const RefereePage = () => {
               <br />
               <Text size="2">
                 {formData.team} has{" "}
-                {violations.filter(
+                {mounted ? violations.filter(
                   (t) =>
                     t.number === formData.team &&
                     t.ruleId === formData.rule &&
                     t.severity === formData.sev
-                ).length}{" "}
+                ).length : 0}{" "}
                 total violations of this type
               </Text>
             </Text>
@@ -395,7 +397,7 @@ const RefereePage = () => {
               <br />
               <Text size="2">
                 {removeViolationData?.team} has{" "}
-                {removeViolationData
+                {mounted && removeViolationData
                   ? violations.filter(
                     (t) =>
                       t.number === removeViolationData.team &&

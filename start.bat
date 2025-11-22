@@ -43,10 +43,5 @@ timeout /t 1 /nobreak
 
 echo.
 echo PYRS application started!
-echo Admin page: http://localhost:3000/queue/admin
-echo Queue display: http://localhost:3000/queue/current
-echo Kiosk page: http://localhost:3000/queue/kiosk
-echo Referee page: http://localhost:3000/referee
-echo.
 echo Press any key to exit this window (server will continue running)...
 pause > nul
