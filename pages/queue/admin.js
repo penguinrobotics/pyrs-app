@@ -74,8 +74,8 @@ const AdminPage = () => {
           </Text>
           <img src="/assets/donut.png" alt="chipi" width={64} height={64} />
         </Flex>
-        <Flex direction="row" gap="6" mt="4">
-          <Flex width="600px" gap="4" direction="column">
+        <Grid columns={{ initial: '1', md: '2' }} gap="6" mt="4">
+          <Flex gap="4" direction="column">
             <Flex direction="row" align="center" justify="center" gap="2">
               <Text weight="bold" size="7" align="center">
                 Up Next
@@ -109,13 +109,13 @@ const AdminPage = () => {
                     <Table.Body>
                       {nowServing.map((team, index) => (
                         <Table.Row key={index}>
-                          <Table.Cell>
+                          <Table.Cell style={{ verticalAlign: 'middle' }}>
                             <Text size="4" weight="bold">
                               {team.number}
                             </Text>
                           </Table.Cell>
-                          <Table.Cell>
-                            <Box as="span" style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                          <Table.Cell style={{ verticalAlign: 'middle' }}>
+                            <Box style={{ fontSize: '16px', fontWeight: 'bold' }}>
                               <ReactTimeAgo
                                 date={team.at ? new Date(team.at) : new Date()}
                                 locale="en-US"
@@ -171,7 +171,7 @@ const AdminPage = () => {
               <Inset>
                 <Box minHeight="300px" px="4">
                   <ol>
-                    <Grid columns="3" gap="2">
+                    <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="2">
                       {queue.map((team, index) => (
                         <li
                           key={index}
@@ -197,7 +197,7 @@ const AdminPage = () => {
               </Inset>
             </Card>
           </Flex>
-        </Flex>
+        </Grid>
       </Flex>
     </>
   );

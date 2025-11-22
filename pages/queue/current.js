@@ -91,7 +91,6 @@ const QueuePage = () => {
                       <Text size="5" style={{ color: "white" }}>
                         Time Past
                       </Text>
-                      <img src="/assets/wahoo.webp" alt="wahoo" width={40} height={32} />
                     </Flex>
                   </Grid>
                   <Separator size="4" style={{ backgroundColor: "white" }} />
@@ -136,7 +135,7 @@ const QueuePage = () => {
                 >
                   <Flex direction="row" align="center" justify="center">
                     <Text size="4" align="center">
-                      Join the queue through on tablet below
+                      Join the queue through on tablet
                     </Text>
                     <img src="/assets/penguin.webp" alt="penguin" width={32} height={32} />
                   </Flex>

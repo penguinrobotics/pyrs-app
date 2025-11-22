@@ -63,7 +63,7 @@ const KioskPage = () => {
             <Button
               key={index}
               size="4"
-              style={{ width: "120px", height: "60px" }}
+              style={{ width: "120px", height: "70px" }}
               disabled={queued.includes(t.number)}
               onClick={() => handleTeamClick(t.number)}
             >
@@ -74,25 +74,27 @@ const KioskPage = () => {
       </Flex>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Content width="400px">
-          <Text size="4" p="4">
-            Add team <Text weight="bold">{team}</Text> to the queue?
-          </Text>
-          <Flex gap="3" mt="4" justify="end">
-            <Dialog.Close>
-              <Button
-                variant="soft"
-                color="gray"
-                size="3"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-            </Dialog.Close>
-            <Dialog.Close>
-              <Button size="3" onClick={handleJoin}>
-                Join Queue
-              </Button>
-            </Dialog.Close>
+          <Flex direction="column" gap="4">
+            <Text size="4" p="4">
+              Add team <Text weight="bold">{team}</Text> to the queue?
+            </Text>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button
+                  variant="soft"
+                  color="gray"
+                  size="3"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </Dialog.Close>
+              <Dialog.Close>
+                <Button size="3" onClick={handleJoin}>
+                  Join Queue
+                </Button>
+              </Dialog.Close>
+            </Flex>
           </Flex>
         </Dialog.Content>
       </Dialog.Root>
