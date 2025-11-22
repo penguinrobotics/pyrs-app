@@ -1,0 +1,52 @@
+h1 {
+  text-align: center;
+}
+
+body {
+  margin: 48px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.current-team {
+  display: flex;
+  width: 300px;
+  height: 70px;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.queue-list {
+  font-size: 20px;
+  columns: 4 auto;
+}
+
+.admin-list {
+  columns: 4 auto;
+}
+
+.admin-list p {
+  width: 130px;
+  height: 20px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.admin-list li {
+  display: flex;
+  direction: row;
+  align-items: center;
+}
+
+.admin-list button {
+  height: 21px;
+}
+
+.warning {
+  color: red;
+}
