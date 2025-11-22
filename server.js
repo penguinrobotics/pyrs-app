@@ -332,6 +332,7 @@ app.prepare().then(() => {
     console.log('  - http://' + hostname + ':' + port + '/queue/admin');
     console.log('  - http://' + hostname + ':' + port + '/queue/current');
     console.log('  - http://' + hostname + ':' + port + '/queue/kiosk');
+    console.log('  - http://' + hostname + ':' + port + '/referee');
     console.log('========================================');
   });
 });
