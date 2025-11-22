@@ -49,7 +49,7 @@ const KioskPage = () => {
   return (
     <>
       <Head>
-        <title>Queueing App - Kiosk</title>
+        <title>PYRS App - Kiosk</title>
       </Head>
       <Flex direction="column" gap="6">
         <Flex direction="row" align="center" justify="center" gap="4">

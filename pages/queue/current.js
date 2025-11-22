@@ -45,7 +45,7 @@ const QueuePage = () => {
   return (
     <>
       <Head>
-        <title>Queueing App - Queue</title>
+        <title>PYRS App - Queue</title>
       </Head>
       <Flex direction="column" gap="6">
         <Flex direction="row" align="center" justify="center" gap="4">

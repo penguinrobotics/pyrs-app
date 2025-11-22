@@ -4,7 +4,17 @@ const next = require('next');
 const WebSocket = require('ws');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { initializeFromFile, updateFile, getState, setState, writeLock } = require('./lib/fileOperations');
+const {
+  initializeFromFile,
+  updateFile,
+  getState,
+  setState,
+  writeLock,
+  initializeRefereeFromFile,
+  updateRefereeFile,
+  getRefereeState,
+  setRefereeState
+} = require('./lib/fileOperations');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -16,12 +26,14 @@ const handle = app.getRequestHandler();
 
 // Initialize queue data from file
 initializeFromFile();
+// Initialize referee data from file
+initializeRefereeFromFile();
 
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
-      const { pathname} = parsedUrl;
+      const { pathname } = parsedUrl;
 
       console.log(`[REQUEST] ${req.method} ${pathname}`);
 
@@ -135,6 +147,79 @@ app.prepare().then(() => {
         return;
       }
 
+      if (pathname === '/api/add_violation' && req.method === 'POST') {
+        console.log('[API /api/add_violation] Request received');
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', async () => {
+          console.log('[API /api/add_violation] Body received:', body);
+          await writeLock.acquire();
+          try {
+            const { team, rule, severity } = JSON.parse(body);
+            console.log('[API /api/add_violation] Adding violation:', { team, rule, severity });
+            const { violations } = getRefereeState();
+
+            violations.push({ number: team, ruleId: rule, severity: severity });
+            setRefereeState(violations);
+            updateRefereeFile();
+            global.broadcastQueueData();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ team, rule, severity }));
+          } catch (error) {
+            console.error('[API /api/add_violation] Error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to add violation' }));
+          } finally {
+            writeLock.release();
+          }
+        });
+        return;
+      }
+
+      if (pathname === '/api/remove_violation' && req.method === 'POST') {
+        console.log('[API /api/remove_violation] Request received');
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', async () => {
+          console.log('[API /api/remove_violation] Body received:', body);
+          await writeLock.acquire();
+          try {
+            const { team, rule, severity } = JSON.parse(body);
+            console.log('[API /api/remove_violation] Removing violation:', { team, rule, severity });
+            const { violations } = getRefereeState();
+
+            // Find first instance of violation that matches team, rule and severity
+            let found = false;
+            for (let i = 0; i < violations.length; i++) {
+              if (violations[i].number === team && violations[i].ruleId === rule && violations[i].severity === severity) {
+                violations.splice(i, 1);
+                found = true;
+                console.log('[API /api/remove_violation] Violation removed');
+                break;
+              }
+            }
+
+            if (found) {
+              setRefereeState(violations);
+              updateRefereeFile();
+              global.broadcastQueueData();
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ team, rule, severity }));
+            } else {
+              res.writeHead(404, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Violation not found' }));
+            }
+          } catch (error) {
+            console.error('[API /api/remove_violation] Error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to remove violation' }));
+          } finally {
+            writeLock.release();
+          }
+        });
+        return;
+      }
+
       if (pathname === '/api/teams' && req.method === 'GET') {
         try {
           const vexTmUrl = process.env.VEX_TM_URL || 'http://10.0.0.3/division1/teams';
@@ -181,7 +266,8 @@ app.prepare().then(() => {
   // Broadcast queue data to all connected clients
   function broadcastQueueData() {
     const { nowServing, queue } = getState();
-    const data = JSON.stringify({ nowServing, queue });
+    const { violations } = getRefereeState();
+    const data = JSON.stringify({ nowServing, queue, violations });
 
     let sentCount = 0;
     wss.clients.forEach((client) => {
@@ -200,7 +286,8 @@ app.prepare().then(() => {
 
     // Send initial data immediately
     const { nowServing, queue } = getState();
-    ws.send(JSON.stringify({ nowServing, queue }));
+    const { violations } = getRefereeState();
+    ws.send(JSON.stringify({ nowServing, queue, violations }));
 
     // Setup heartbeat to detect broken connections
     ws.isAlive = true;

@@ -65,11 +65,11 @@ const AdminPage = () => {
   return (
     <>
       <Head>
-        <title>Queueing App - Admin</title>
+        <title>PYRS App - Admin</title>
       </Head>
       <Flex direction="column" gap="6">
         <Flex direction="row" align="center" justify="center" gap="4">
-          <Text weight="bold" size="9" align="center">
+          <Text weight="bold" size="8" align="center">
             Admin Page
           </Text>
           <img src="/assets/donut.png" alt="chipi" width={64} height={64} />
