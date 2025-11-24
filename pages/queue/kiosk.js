@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
 import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
-import { useQueueData } from "../../lib/useQueueData";
+import { usePyrsAppData } from "../../lib/usePyrsAppData";
 
 const KioskPage = () => {
   const [teams, setTeams] = useState([]);
@@ -9,7 +9,7 @@ const KioskPage = () => {
   const [team, setTeam] = useState("");
 
   // Get real-time queue data from WebSocket
-  const { nowServing, queue, isConnected } = useQueueData();
+  const { nowServing, queue, isConnected } = usePyrsAppData();
 
   // Compute queued teams from WebSocket data
   const queued = useMemo(() => {

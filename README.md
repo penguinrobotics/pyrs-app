@@ -182,7 +182,7 @@ The application uses WebSocket for real-time updates. All connected clients auto
 
 **WebSocket Endpoint**: `ws://localhost:3000/ws`
 
-The WebSocket connection is managed by the `useQueueData` hook, which provides:
+The WebSocket connection is managed by the `usePyrsAppData` hook, which provides:
 - `nowServing`: Array of teams currently being served
 - `queue`: Array of teams waiting in the queue
 - `isConnected`: Boolean indicating WebSocket connection status
@@ -195,7 +195,7 @@ pyrs-app/
 │   └── queue_data.json          # Persistent queue data storage
 ├── lib/
 │   ├── fileOperations.js        # File I/O operations for queue data
-│   └── useQueueData.js          # React hook for WebSocket queue data
+│   └── usePyrsAppData.js        # React hook for WebSocket queue data
 ├── pages/
 │   ├── _app.js                  # Next.js app wrapper with theme
 │   ├── api/                     # API routes (handled by server.js)
@@ -240,7 +240,7 @@ Queue data is stored in `data/queue_data.json`:
 
 - **Custom Server** (`server.js`): Handles HTTP requests, WebSocket connections, and API routes
 - **File Operations** (`lib/fileOperations.js`): Manages queue data persistence with mutex locking
-- **Queue Data Hook** (`lib/useQueueData.js`): Singleton WebSocket connection shared across components
+- **Queue Data Hook** (`lib/usePyrsAppData.js`): Singleton WebSocket connection shared across components
 - **Pages**: React components for each view (kiosk, admin, display)
 
 ### Thread Safety

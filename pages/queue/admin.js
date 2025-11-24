@@ -18,11 +18,11 @@ import {
   ChevronRightIcon,
   Cross2Icon,
 } from "@radix-ui/react-icons";
-import { useQueueData } from "../../lib/useQueueData";
+import { usePyrsAppData } from "../../lib/usePyrsAppData";
 
 const AdminPage = () => {
   // Get real-time queue data from WebSocket
-  const { nowServing, queue, isConnected } = useQueueData();
+  const { nowServing, queue, isConnected } = usePyrsAppData();
 
   const handleNext = async () => {
     await fetch(`/api/serve`, { method: "POST" });

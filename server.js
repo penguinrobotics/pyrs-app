@@ -230,8 +230,8 @@ app.prepare().then(() => {
           $('tbody tr').each((index, element) => {
             const $tds = $(element).find('td');
             const number = $tds.eq(0).text().trim();
-            const school = $tds.eq(3).text().trim();
-            teamData.push({ number, school });
+            const organization = $tds.eq(3).text().trim();
+            teamData.push({ number, organization });
           });
 
           res.writeHead(200, { 'Content-Type': 'application/json' });

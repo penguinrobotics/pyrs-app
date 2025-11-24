@@ -12,7 +12,7 @@ import {
   Text,
 } from "@radix-ui/themes";
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { useQueueData } from "../lib/useQueueData";
+import { usePyrsAppData } from "../lib/usePyrsAppData";
 
 const RULES = [
   { ruleId: "S1" },
@@ -52,7 +52,7 @@ const RULES = [
 
 const RefereePage = () => {
   const [teams, setTeams] = useState([]);
-  const { violations } = useQueueData();
+  const { violations } = usePyrsAppData();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [removeViolationData, setRemoveViolationData] = useState(null);

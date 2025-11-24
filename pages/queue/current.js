@@ -12,14 +12,14 @@ import {
   Spinner,
   Text,
 } from "@radix-ui/themes";
-import { useQueueData } from "../../lib/useQueueData";
+import { usePyrsAppData } from "../../lib/usePyrsAppData";
 
 const QueuePage = () => {
   const [flash, setFlash] = useState(false);
   const prevNowServingLength = useRef(0);
 
   // Get real-time queue data from WebSocket
-  const { nowServing, queue, isConnected } = useQueueData();
+  const { nowServing, queue, isConnected } = usePyrsAppData();
 
   let blinkInterval;
 
