@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node server.js",
+    "dev:offline": "cross-env OFFLINE_MODE=true node server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js"
   },
@@ -23,6 +24,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "eslint": "^8",
     "eslint-config-next": "^14.2.0"
   }

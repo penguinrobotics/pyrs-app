@@ -34,3 +34,5 @@ next-env.d.ts
 
 /data
 pyrs-app.zip
+data/queue_data.json
+data/referee_data.json

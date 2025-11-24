@@ -4,6 +4,8 @@ const next = require('next');
 const WebSocket = require('ws');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const fs = require('fs');
+const path = require('path');
 const {
   initializeFromFile,
   updateFile,
@@ -222,17 +224,27 @@ app.prepare().then(() => {
 
       if (pathname === '/api/teams' && req.method === 'GET') {
         try {
-          const vexTmUrl = process.env.VEX_TM_URL || 'http://10.0.0.3/division1/teams';
-          const html = await axios.get(vexTmUrl);
-          const $ = cheerio.load(html.data);
+          let teamData = [];
 
-          const teamData = [];
-          $('tbody tr').each((index, element) => {
-            const $tds = $(element).find('td');
-            const number = $tds.eq(0).text().trim();
-            const organization = $tds.eq(3).text().trim();
-            teamData.push({ number, organization });
-          });
+          // Check if running in offline mode
+          if (process.env.OFFLINE_MODE === 'true') {
+            console.log('[OFFLINE MODE] Using static team data from teams_offline.json');
+            const offlineDataPath = path.join(__dirname, 'data', 'teams_offline.json');
+            const offlineData = fs.readFileSync(offlineDataPath, 'utf8');
+            teamData = JSON.parse(offlineData);
+          } else {
+            // Online mode: scrape from VEX Tournament Manager
+            const vexTmUrl = process.env.VEX_TM_URL || 'http://10.0.0.3/division1/teams';
+            const html = await axios.get(vexTmUrl);
+            const $ = cheerio.load(html.data);
+
+            $('tbody tr').each((index, element) => {
+              const $tds = $(element).find('td');
+              const number = $tds.eq(0).text().trim();
+              const organization = $tds.eq(3).text().trim();
+              teamData.push({ number, organization });
+            });
+          }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(teamData));
