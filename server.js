@@ -74,25 +74,30 @@ app.prepare().then(() => {
       }
 
       if (pathname === '/api/serve' && req.method === 'POST') {
-        await writeLock.acquire();
-        try {
-          const { nowServing, queue } = getState();
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', async () => {
+          await writeLock.acquire();
+          try {
+            const { field } = body && body.length > 0 ? JSON.parse(body) : {};
+            const { nowServing, queue } = getState();
 
-          if (queue.length) {
-            const next = queue.shift();
-            nowServing.push({ ...next, at: next.at || new Date() });
-            setState(nowServing, queue);
-            updateFile();
-            global.broadcastQueueData();
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ team: next }));
-          } else {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'empty' }));
+            if (queue.length) {
+              const next = queue.shift();
+              nowServing.push({ ...next, at: next.at || new Date(), field: field || null });
+              setState(nowServing, queue);
+              updateFile();
+              global.broadcastQueueData();
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ team: next }));
+            } else {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'empty' }));
+            }
+          } finally {
+            writeLock.release();
           }
-        } finally {
-          writeLock.release();
-        }
+        });
         return;
       }
 

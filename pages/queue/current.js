@@ -10,6 +10,7 @@ import {
   Inset,
   Separator,
   Spinner,
+  Table,
   Text,
 } from "@radix-ui/themes";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
@@ -63,7 +64,7 @@ const QueuePage = () => {
           </Callout.Text>
         </Callout.Root>
         <Flex direction="row" gap="6" mt="4">
-          <Flex width="450px" gap="4" direction="column">
+          <Flex width="600px" gap="4" direction="column">
             <Flex direction="row" align="center" justify="center" gap="2">
               <Text weight="bold" size="7" align="center">
                 Up Next
@@ -81,39 +82,46 @@ const QueuePage = () => {
                   }}
                   minHeight="300px"
                 >
-                  <Grid columns="2">
-                    <Flex direction="row" align="center" gap="2">
-                      <Text size="5" style={{ color: "white" }}>
-                        Team #
-                      </Text>
-                    </Flex>
-                    <Flex direction="row" align="center" gap="1">
-                      <Text size="5" style={{ color: "white" }}>
-                        Time Past
-                      </Text>
-                    </Flex>
-                  </Grid>
-                  <Separator size="4" style={{ backgroundColor: "white" }} />
-                  <Grid columns="1fr 1fr" gap="2">
-                    {nowServing.map((team, index) => (
-                      <React.Fragment key={index}>
-                        <Text
-                          size="7"
-                          style={{ color: "white" }}
-                          weight="bold"
-                        >
-                          {team.number}
-                        </Text>
-                        <Box as="span" style={{ fontSize: '22px', fontWeight: 'bold', color: 'white' }}>
-                          <ReactTimeAgo
-                            date={team.at ? new Date(team.at) : new Date()}
-                            locale="en-US"
-                            timeStyle="mini"
-                          />
-                        </Box>
-                      </React.Fragment>
-                    ))}
-                  </Grid>
+                  <Table.Root size="1" variant="ghost" style={{ color: "white" }}>
+                    <Table.Header>
+                      <Table.Row>
+                        <Table.ColumnHeaderCell style={{ color: "white" }}>
+                          <Text size="5" style={{ color: "white" }}>Team #</Text>
+                        </Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell style={{ color: "white" }}>
+                          <Text size="5" style={{ color: "white" }}>Field</Text>
+                        </Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell style={{ color: "white" }}>
+                          <Text size="5" style={{ color: "white" }}>Time Past</Text>
+                        </Table.ColumnHeaderCell>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {nowServing.map((team, index) => (
+                        <Table.Row key={index}>
+                          <Table.Cell>
+                            <Text size="7" style={{ color: "white" }} weight="bold">
+                              {team.number}
+                            </Text>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <Text size="7" style={{ color: "white" }} weight="bold">
+                              {team.field || "-"}
+                            </Text>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <Text size="7" style={{ color: "white" }} weight="bold">
+                              <ReactTimeAgo
+                                date={team.at ? new Date(team.at) : new Date()}
+                                locale="en-US"
+                                timeStyle="mini"
+                              />
+                            </Text>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table.Root>
                 </Flex>
               </Inset>
             </Card>
@@ -135,20 +143,20 @@ const QueuePage = () => {
                 >
                   <Flex direction="row" align="center" justify="center">
                     <Text size="4" align="center">
-                      Join the queue through on tablet
+                      Join the queue on the kiosk tablet
                     </Text>
                     <img src="/assets/penguin.webp" alt="penguin" width={32} height={32} />
                   </Flex>
                 </Callout.Root>
                 <Box minHeight="300px" px="4">
                   <ol>
-                    <Grid columns="3" gap="2">
+                    <Grid columns="5" gap="2">
                       {queue.map((team, index) => (
                         <li
                           key={index}
                           style={{ listStyle: "decimal", fontSize: "22px" }}
                         >
-                          <Text size="7" weight="bold">
+                          <Text size="6" weight="bold">
                             {team.number}
                           </Text>
                         </li>

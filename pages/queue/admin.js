@@ -24,8 +24,14 @@ const AdminPage = () => {
   // Get real-time queue data from WebSocket
   const { nowServing, queue, isConnected } = usePyrsAppData();
 
-  const handleNext = async () => {
-    await fetch(`/api/serve`, { method: "POST" });
+  const handleNext = async (field) => {
+    await fetch(`/api/serve`, {
+      method: "POST",
+      body: JSON.stringify({ field }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
   };
 
   const handleRemove = async (team) => {
@@ -48,19 +54,6 @@ const AdminPage = () => {
     });
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Backspace") {
-        handleNext();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   return (
     <>
@@ -78,14 +71,28 @@ const AdminPage = () => {
           <Flex gap="4" direction="column">
             <Flex direction="row" align="center" justify="center" gap="2">
               <Text weight="bold" size="7" align="center">
-                Up Next
+                Send to field
               </Text>
               <img src="/assets/catjump.webp" alt="catjump" width={32} height={32} />
             </Flex>
-            <Button onClick={handleNext} size="4">
-              <ChevronLeftIcon />
-              Queue next team
-            </Button>
+            <Grid columns="4" gap="2">
+              <Button onClick={() => handleNext(1)} size="3" color="red">
+                <ChevronLeftIcon />
+                1
+              </Button>
+              <Button onClick={() => handleNext(2)} size="3" color="green">
+                <ChevronLeftIcon />
+                2
+              </Button>
+              <Button onClick={() => handleNext(3)} size="3" color="blue">
+                <ChevronLeftIcon />
+                3
+              </Button>
+              <Button onClick={() => handleNext(4)} size="3" color="yellow">
+                <ChevronLeftIcon />
+                4
+              </Button>
+            </Grid>
             <Card>
               <Inset>
                 <Flex
@@ -97,12 +104,10 @@ const AdminPage = () => {
                     <Table.Header>
                       <Table.Row>
                         <Table.ColumnHeaderCell>Team</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Field</Table.ColumnHeaderCell>
                         <Table.ColumnHeaderCell>Time</Table.ColumnHeaderCell>
                         <Table.ColumnHeaderCell justify="center">
-                          Remove
-                        </Table.ColumnHeaderCell>
-                        <Table.ColumnHeaderCell justify="center">
-                          Move back
+                          Actions
                         </Table.ColumnHeaderCell>
                       </Table.Row>
                     </Table.Header>
@@ -115,6 +120,11 @@ const AdminPage = () => {
                             </Text>
                           </Table.Cell>
                           <Table.Cell style={{ verticalAlign: 'middle' }}>
+                            <Text size="4" weight="bold">
+                              {team.field || "-"}
+                            </Text>
+                          </Table.Cell>
+                          <Table.Cell style={{ verticalAlign: 'middle' }}>
                             <Box style={{ fontSize: '16px', fontWeight: 'bold' }}>
                               <ReactTimeAgo
                                 date={team.at ? new Date(team.at) : new Date()}
@@ -124,30 +134,29 @@ const AdminPage = () => {
                             </Box>
                           </Table.Cell>
                           <Table.Cell>
-                            <Flex justify="center">
+                            <Flex direction="row" gap="1" align="center" justify="center">
                               <IconButton
+                                size="1"
                                 color="crimson"
                                 variant="surface"
                                 onClick={() => handleRemove(team.number)}
                               >
                                 <Cross2Icon />
                               </IconButton>
-                            </Flex>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Flex direction="row" gap="2" justify="center">
                               <Button
+                                size="1"
                                 onClick={() => handleBack(team.number)}
                                 variant="surface"
                               >
                                 <ChevronRightIcon />
                               </Button>
                               <Button
+                                size="1"
                                 onClick={() => handleBack(team.number, 5)}
                                 variant="surface"
                               >
                                 <ChevronRightIcon />
-                                5x
+                                5
                               </Button>
                             </Flex>
                           </Table.Cell>
