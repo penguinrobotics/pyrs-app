@@ -22,6 +22,14 @@ const HomePage = () => {
               </Flex>
             </Button>
           </Link>
+          <Link href="/judging" style={{ width: "100%" }}>
+            <Button size="3" style={{ width: "100%", height: "80px" }}>
+              <Flex direction="column" align="center" gap="1">
+                <Text size="4" weight="bold">📋 Judging</Text>
+                <Text size="1" style={{ opacity: 0.8 }}>Generate judging schedule</Text>
+              </Flex>
+            </Button>
+          </Link>
           <Link href="/queue/admin" style={{ width: "100%" }}>
             <Button size="3" style={{ width: "100%", height: "80px" }}>
               <Flex direction="column" align="center" gap="1">

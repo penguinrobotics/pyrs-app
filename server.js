@@ -15,7 +15,11 @@ const {
   initializeRefereeFromFile,
   updateRefereeFile,
   getRefereeState,
-  setRefereeState
+  setRefereeState,
+  initializeJudgingFromFile,
+  updateJudgingFile,
+  getJudgingState,
+  setJudgingState
 } = require('./lib/fileOperations');
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -30,6 +34,108 @@ const handle = app.getRequestHandler();
 initializeFromFile();
 // Initialize referee data from file
 initializeRefereeFromFile();
+// Initialize judging data from file
+initializeJudgingFromFile();
+
+// Helper function to parse time and add minutes
+function parseTime(timeStr) {
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return null;
+
+  let hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
+  const period = match[3].toUpperCase();
+
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+
+  return { hours, minutes };
+}
+
+function formatTime(hours, minutes) {
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
+function addMinutes(timeStr, minutesToAdd) {
+  const time = parseTime(timeStr);
+  if (!time) return timeStr;
+
+  let totalMinutes = time.hours * 60 + time.minutes + minutesToAdd;
+  const newHours = Math.floor(totalMinutes / 60) % 24;
+  const newMinutes = totalMinutes % 60;
+
+  return formatTime(newHours, newMinutes);
+}
+
+// Calculate collision score (lower is better)
+function calculateCollisions(schedule) {
+  let collisions = 0;
+  for (const slot of schedule) {
+    const organizations = slot.teams.map(t => t.organization);
+    const uniqueOrgs = new Set(organizations);
+    collisions += (organizations.length - uniqueOrgs.size);
+  }
+  return collisions;
+}
+
+// Shuffle array
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Generate optimized schedule
+function generateOptimizedSchedule(teams, startTime, panels, interval) {
+  console.log('[Schedule Generator] Starting optimization...');
+  const iterations = 500;
+  let bestSchedule = null;
+  let bestScore = Infinity;
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const shuffledTeams = shuffleArray(teams);
+    const schedule = [];
+    let currentTime = startTime;
+
+    // Create time slots
+    for (let i = 0; i < shuffledTeams.length; i += panels) {
+      const slotTeams = shuffledTeams.slice(i, i + panels);
+      schedule.push({
+        time: currentTime,
+        teams: slotTeams.map(t => t.number)
+      });
+      currentTime = addMinutes(currentTime, interval);
+    }
+
+    const score = calculateCollisions(schedule.map(slot => ({
+      ...slot,
+      teams: slot.teams.map(teamNum => teams.find(t => t.number === teamNum))
+    })));
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestSchedule = schedule;
+    }
+  }
+
+  console.log('[Schedule Generator] Best collision score:', bestScore);
+
+  return {
+    metadata: {
+      startTime,
+      interval,
+      panels,
+      generatedAt: new Date().toISOString(),
+      collisions: bestScore
+    },
+    schedule: bestSchedule
+  };
+}
 
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
@@ -258,6 +364,50 @@ app.prepare().then(() => {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Failed to fetch teams' }));
         }
+        return;
+      }
+
+      if (pathname === '/api/judging/schedule' && req.method === 'GET') {
+        try {
+          const schedule = getJudgingState();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(schedule));
+        } catch (error) {
+          console.error('Error fetching judging schedule:', error);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to fetch judging schedule' }));
+        }
+        return;
+      }
+
+      if (pathname === '/api/judging/generate' && req.method === 'POST') {
+        console.log('[API /api/judging/generate] Request received');
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', async () => {
+          console.log('[API /api/judging/generate] Body received:', body);
+          await writeLock.acquire();
+          try {
+            const { startTime, panels, interval, teams } = JSON.parse(body);
+            console.log('[API /api/judging/generate] Generating schedule:', { startTime, panels, interval, teamCount: teams.length });
+
+            // Generate optimized schedule
+            const schedule = generateOptimizedSchedule(teams, startTime, panels, interval);
+
+            // Save to state and file
+            setJudgingState(schedule);
+            updateJudgingFile();
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(schedule));
+          } catch (error) {
+            console.error('[API /api/judging/generate] Error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to generate schedule' }));
+          } finally {
+            writeLock.release();
+          }
+        });
         return;
       }
 
