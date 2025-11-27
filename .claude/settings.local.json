@@ -10,7 +10,10 @@
       "Bash(kill:*)",
       "Bash(git mv:*)",
       "Bash(git rm:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm ls:*)",
+      "WebFetch(domain:www.radix-ui.com)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

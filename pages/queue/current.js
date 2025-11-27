@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, memo, useMemo, useCallback } from "react";
 import Head from "next/head";
 import ReactTimeAgo from "react-time-ago";
 import {
@@ -13,11 +13,308 @@ import {
   Table,
   Text,
 } from "@radix-ui/themes";
+import { DoubleArrowUpIcon, ChevronUpIcon } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
+
+const Marker = ({ color, children }) => {
+  return (
+    <Box
+      style={{
+        backgroundColor: `var(--${color}-3)`,
+        border: `2px solid var(--${color}-11)`,
+        borderRadius: "50%",
+        width: "24px",
+        height: "24px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: `var(--${color}-11)`,
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
+
+// Memoized component for "Up Next" table
+const NowServingTable = memo(({ nowServing, flash }) => {
+  // Only enable scrolling if there are more than 5 teams (enough to overflow the container)
+  const shouldScroll = nowServing.length > 5;
+
+  return (
+    <Box
+      style={{
+        backgroundColor: flash ? "transparent" : "rgb(0,130,255)",
+        minHeight: "300px",
+        overflow: "hidden",
+        position: "relative"
+      }}
+      p="4"
+    >
+      {nowServing.length > 0 ? (
+        <>
+          {/* Pinned header */}
+          <Box style={{ position: "relative", zIndex: 10, backgroundColor: "rgb(0,130,255)" }}>
+            <Table.Root size="1" variant="ghost" style={{ color: "white", tableLayout: "fixed", width: "100%" }}>
+              <colgroup>
+                <col style={{ width: "33.33%" }} />
+                <col style={{ width: "33.33%" }} />
+                <col style={{ width: "33.34%" }} />
+              </colgroup>
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeaderCell style={{ color: "white" }}>
+                    <Text size="5" style={{ color: "white" }}>Team #</Text>
+                  </Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell style={{ color: "white" }}>
+                    <Text size="5" style={{ color: "white" }}>Field</Text>
+                  </Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell style={{ color: "white" }}>
+                    <Text size="5" style={{ color: "white" }}>Time Past</Text>
+                  </Table.ColumnHeaderCell>
+                </Table.Row>
+              </Table.Header>
+            </Table.Root>
+          </Box>
+          {/* Scrolling body container */}
+          <Box style={{ overflow: "hidden", position: "relative", flex: 1 }}>
+            <Box
+              className="queue-scroll"
+              style={{
+                animation: shouldScroll ? "scrollQueue 30s linear infinite" : "none"
+              }}
+            >
+              <Table.Root size="1" variant="ghost" style={{ color: "white", tableLayout: "fixed", width: "100%" }}>
+                <colgroup>
+                  <col style={{ width: "33.33%" }} />
+                  <col style={{ width: "33.33%" }} />
+                  <col style={{ width: "33.34%" }} />
+                </colgroup>
+                <Table.Body>
+                  {/* First loop of content */}
+                  {nowServing.map((team, index) => (
+                    <Table.Row key={`first-${index}`}>
+                      <Table.Cell>
+                        <Text size="7" style={{ color: "white" }} weight="bold">
+                          {team.number}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text size="7" style={{ color: "white" }} weight="bold">
+                          {team.field || "-"}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text size="7" style={{ color: "white" }} weight="bold">
+                          <ReactTimeAgo
+                            date={team.at ? new Date(team.at) : new Date()}
+                            locale="en-US"
+                            timeStyle="mini"
+                            updateInterval={5000}
+                          />
+                        </Text>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                  {/* Blank row separator when scrolling */}
+                  {shouldScroll && (
+                    <Table.Row key="blank-separator" style={{ height: "0.5em" }}>
+                      <Table.Cell style={{ padding: "0.25em" }}>
+                        <Text size="7" style={{ color: "transparent" }}>-</Text>
+                      </Table.Cell>
+                      <Table.Cell style={{ padding: "0.25em" }}>
+                        <Text size="7" style={{ color: "transparent" }}>-</Text>
+                      </Table.Cell>
+                      <Table.Cell style={{ padding: "0.25em" }}>
+                        <Text size="7" style={{ color: "transparent" }}>-</Text>
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                  {/* Second loop for seamless scrolling - only duplicate if scrolling is enabled */}
+                  {shouldScroll && nowServing.map((team, index) => (
+                    <Table.Row key={`second-${index}`}>
+                      <Table.Cell>
+                        <Text size="7" style={{ color: "white" }} weight="bold">
+                          {team.number}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text size="7" style={{ color: "white" }} weight="bold">
+                          {team.field || "-"}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text size="7" style={{ color: "white" }} weight="bold">
+                          <ReactTimeAgo
+                            date={team.at ? new Date(team.at) : new Date()}
+                            locale="en-US"
+                            timeStyle="mini"
+                            updateInterval={5000}
+                          />
+                        </Text>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
+            </Box>
+          </Box>
+        </>
+      ) : (
+        <Flex align="center" justify="center" style={{ height: "100%" }}>
+          <Text size="5" style={{ color: "white" }}>No teams up next</Text>
+        </Flex>
+      )}
+    </Box>
+  );
+});
+
+// Memoized component for "Current Queue" list
+const CurrentQueueList = memo(({ queue, getTeamIconButton }) => {
+  return (
+    <Box minHeight="300px" px="4">
+      <ol>
+        <Grid columns="5" gap="2">
+          {queue.map((team, index) => (
+            <li
+              key={index}
+              style={{ listStyle: "decimal", fontSize: "22px" }}
+            >
+              <Flex direction="row" align="center" gap="2">
+                <Text size="6" weight="bold">
+                  {team.number}
+                </Text>
+                {getTeamIconButton(team.number)}
+              </Flex>
+            </li>
+          ))}
+        </Grid>
+      </ol>
+    </Box>
+  );
+});
+
+// Memoized component for "Judging Queue" table
+const JudgingScheduleTable = memo(({ filteredSchedule, getTimeSlotIconButton }) => {
+  return (
+    <Box style={{ height: "100%", overflow: "hidden", position: "relative" }}>
+      {filteredSchedule.length > 0 ? (
+        <>
+          {/* Pinned first 2 rows */}
+          <Box style={{
+            position: "relative",
+            zIndex: 10,
+            backgroundColor: "var(--color-background)",
+            borderBottom: "2px solid var(--gray-6)"
+          }}>
+            <Table.Root size="2" variant="surface">
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeaderCell style={{ width: "180px" }}>
+                    <Text size="5" weight="bold">Time</Text>
+                  </Table.ColumnHeaderCell>
+                  {filteredSchedule[0]?.teams.map((_, panelIndex) => (
+                    <Table.ColumnHeaderCell key={panelIndex} style={{ width: "150px" }}>
+                    </Table.ColumnHeaderCell>
+                  ))}
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {filteredSchedule.slice(0, 2).map((slot, index) => (
+                  <Table.Row key={index} style={{ backgroundColor: index === 0 ? "lightgreen" : "transparent" }}>
+                    <Table.Cell>
+                      <Flex direction="row" align="center" gap="2">
+                        <Text size="6" weight="bold">{slot.time}</Text>
+                        {getTimeSlotIconButton(index)}
+                      </Flex>
+                    </Table.Cell>
+                    {slot.teams.map((team, teamIndex) => (
+                      <Table.Cell key={teamIndex}>
+                        <Text size="6" weight="bold">{team}</Text>
+                      </Table.Cell>
+                    ))}
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          </Box>
+
+          {/* Scrolling section for remaining rows */}
+          {filteredSchedule.length > 2 && (
+            <Box
+              style={{
+                height: "calc(100% - 200px)",
+                overflow: "hidden",
+                position: "relative"
+              }}
+            >
+              <Box
+                className="judging-scroll"
+                style={{
+                  animation: "scrollJudging 30s linear infinite",
+                  paddingTop: "10px"
+                }}
+              >
+                <Table.Root size="2" variant="surface">
+                  <Table.Body>
+                    {/* First loop of content */}
+                    {filteredSchedule.slice(2).map((slot, index) => (
+                      <Table.Row key={`first-${index}`}>
+                        <Table.Cell style={{ width: "180px" }}>
+                          <Text size="6" weight="bold">{slot.time}</Text>
+                        </Table.Cell>
+                        {slot.teams.map((team, teamIndex) => (
+                          <Table.Cell key={teamIndex} style={{ width: "150px" }}>
+                            <Text size="6" weight="bold">{team}</Text>
+                          </Table.Cell>
+                        ))}
+                      </Table.Row>
+                    ))}
+                    {/* Blank row separator for scrolling */}
+                    {filteredSchedule.length > 2 && filteredSchedule[0]?.teams && (
+                      <Table.Row key="blank-separator" style={{ height: "0.5em" }}>
+                        <Table.Cell style={{ width: "180px", padding: "0.25em" }}>
+                          <Text size="6" style={{ color: "transparent" }}>-</Text>
+                        </Table.Cell>
+                        {filteredSchedule[0].teams.map((_, teamIndex) => (
+                          <Table.Cell key={teamIndex} style={{ width: "150px", padding: "0.25em" }}>
+                            <Text size="6" style={{ color: "transparent" }}>-</Text>
+                          </Table.Cell>
+                        ))}
+                      </Table.Row>
+                    )}
+                    {/* Second loop for seamless scrolling */}
+                    {filteredSchedule.slice(2).map((slot, index) => (
+                      <Table.Row key={`second-${index}`}>
+                        <Table.Cell style={{ width: "180px" }}>
+                          <Text size="6" weight="bold">{slot.time}</Text>
+                        </Table.Cell>
+                        {slot.teams.map((team, teamIndex) => (
+                          <Table.Cell key={teamIndex} style={{ width: "150px" }}>
+                            <Text size="6" weight="bold">{team}</Text>
+                          </Table.Cell>
+                        ))}
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              </Box>
+            </Box>
+          )}
+        </>
+      ) : (
+        <Flex align="center" justify="center" style={{ height: "100%" }}>
+          <Text size="5" color="gray">No upcoming judging slots</Text>
+        </Flex>
+      )}
+    </Box>
+  );
+});
 
 const QueuePage = () => {
   const [flash, setFlash] = useState(false);
-  const prevNowServingLength = useRef(0);
+  const prevNowServingTeams = useRef(new Set());
+  const isInitialMount = useRef(true);
   const [judgingSchedule, setJudgingSchedule] = useState([]);
   const [filteredSchedule, setFilteredSchedule] = useState([]);
 
@@ -39,10 +336,24 @@ const QueuePage = () => {
 
   // Flash red when a new team is added to nowServing
   useEffect(() => {
-    if (nowServing.length > prevNowServingLength.current) {
+    // Skip flash on initial mount to avoid flashing when loading existing state
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevNowServingTeams.current = new Set(nowServing.map(t => t.number));
+      return;
+    }
+
+    const currentTeams = new Set(nowServing.map(t => t.number));
+    const previousTeams = prevNowServingTeams.current;
+
+    // Check if there are any new teams that weren't in the previous set
+    const hasNewTeams = Array.from(currentTeams).some(team => !previousTeams.has(team));
+
+    if (hasNewTeams && currentTeams.size > 0) {
       flashRed();
     }
-    prevNowServingLength.current = nowServing.length;
+
+    prevNowServingTeams.current = currentTeams;
   }, [nowServing]);
 
   // Fetch judging schedule
@@ -91,6 +402,47 @@ const QueuePage = () => {
 
     return () => clearInterval(interval);
   }, [judgingSchedule]);
+
+  // Helper function to get icon for time slots in judging table
+  const getTimeSlotIconButton = useCallback((slotIndex) => {
+    if (slotIndex === 0) {
+      return (
+        <Marker color="green">
+          <DoubleArrowUpIcon />
+        </Marker>
+      );
+    }
+    if (slotIndex === 1) {
+      return (
+        <Marker color="yellow">
+          <ChevronUpIcon />
+        </Marker>
+      );
+    }
+    return null;
+  }, []);
+
+  // Helper function to get icon for teams in skills queue
+  const getTeamIconButton = useCallback((teamNumber) => {
+    const slotIndex = filteredSchedule.findIndex(slot =>
+      slot.teams.includes(teamNumber)
+    );
+    if (slotIndex === 0) {
+      return (
+        <Marker color="green">
+          <DoubleArrowUpIcon />
+        </Marker>
+      );
+    }
+    if (slotIndex === 1) {
+      return (
+        <Marker color="yellow">
+          <ChevronUpIcon />
+        </Marker>
+      );
+    }
+    return null;
+  }, [filteredSchedule]);
 
   return (
     <>
@@ -148,114 +500,7 @@ const QueuePage = () => {
                       </Text>
                     </Flex>
                   </Callout.Root>
-                  <Box
-                    style={{
-                      backgroundColor: flash ? "transparent" : "rgb(0,130,255)",
-                      minHeight: "300px",
-                      overflow: "hidden",
-                      position: "relative"
-                    }}
-                    p="4"
-                  >
-                    {nowServing.length > 0 ? (
-                      <>
-                        {/* Pinned header */}
-                        <Box style={{ position: "relative", zIndex: 10, backgroundColor: "rgb(0,130,255)" }}>
-                          <Table.Root size="1" variant="ghost" style={{ color: "white", tableLayout: "fixed", width: "100%" }}>
-                            <colgroup>
-                              <col style={{ width: "33.33%" }} />
-                              <col style={{ width: "33.33%" }} />
-                              <col style={{ width: "33.34%" }} />
-                            </colgroup>
-                            <Table.Header>
-                              <Table.Row>
-                                <Table.ColumnHeaderCell style={{ color: "white" }}>
-                                  <Text size="5" style={{ color: "white" }}>Team #</Text>
-                                </Table.ColumnHeaderCell>
-                                <Table.ColumnHeaderCell style={{ color: "white" }}>
-                                  <Text size="5" style={{ color: "white" }}>Field</Text>
-                                </Table.ColumnHeaderCell>
-                                <Table.ColumnHeaderCell style={{ color: "white" }}>
-                                  <Text size="5" style={{ color: "white" }}>Time Past</Text>
-                                </Table.ColumnHeaderCell>
-                              </Table.Row>
-                            </Table.Header>
-                          </Table.Root>
-                        </Box>
-                        {/* Scrolling body container */}
-                        <Box style={{ overflow: "hidden", position: "relative", flex: 1 }}>
-                          <Box
-                            className="queue-scroll"
-                            style={{
-                              animation: nowServing.length > 3 ? "scrollQueue 30s linear infinite" : "none"
-                            }}
-                          >
-                            <Table.Root size="1" variant="ghost" style={{ color: "white", tableLayout: "fixed", width: "100%" }}>
-                              <colgroup>
-                                <col style={{ width: "33.33%" }} />
-                                <col style={{ width: "33.33%" }} />
-                                <col style={{ width: "33.34%" }} />
-                              </colgroup>
-                              <Table.Body>
-                                {/* First loop of content */}
-                                {nowServing.map((team, index) => (
-                                  <Table.Row key={`first-${index}`}>
-                                    <Table.Cell>
-                                      <Text size="7" style={{ color: "white" }} weight="bold">
-                                        {team.number}
-                                      </Text>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                      <Text size="7" style={{ color: "white" }} weight="bold">
-                                        {team.field || "-"}
-                                      </Text>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                      <Text size="7" style={{ color: "white" }} weight="bold">
-                                        <ReactTimeAgo
-                                          date={team.at ? new Date(team.at) : new Date()}
-                                          locale="en-US"
-                                          timeStyle="mini"
-                                        />
-                                      </Text>
-                                    </Table.Cell>
-                                  </Table.Row>
-                                ))}
-                                {/* Second loop for seamless scrolling */}
-                                {nowServing.length > 3 && nowServing.map((team, index) => (
-                                  <Table.Row key={`second-${index}`}>
-                                    <Table.Cell>
-                                      <Text size="7" style={{ color: "white" }} weight="bold">
-                                        {team.number}
-                                      </Text>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                      <Text size="7" style={{ color: "white" }} weight="bold">
-                                        {team.field || "-"}
-                                      </Text>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                      <Text size="7" style={{ color: "white" }} weight="bold">
-                                        <ReactTimeAgo
-                                          date={team.at ? new Date(team.at) : new Date()}
-                                          locale="en-US"
-                                          timeStyle="mini"
-                                        />
-                                      </Text>
-                                    </Table.Cell>
-                                  </Table.Row>
-                                ))}
-                              </Table.Body>
-                            </Table.Root>
-                          </Box>
-                        </Box>
-                      </>
-                    ) : (
-                      <Flex align="center" justify="center" style={{ height: "100%" }}>
-                        <Text size="5" style={{ color: "white" }}>No teams up next</Text>
-                      </Flex>
-                    )}
-                  </Box>
+                  <NowServingTable nowServing={nowServing} flash={flash} />
                 </Inset>
               </Card>
             </Flex>
@@ -275,22 +520,7 @@ const QueuePage = () => {
                       <Spinner size="2" />
                     </Flex>
                   </Callout.Root>
-                  <Box minHeight="300px" px="4">
-                    <ol>
-                      <Grid columns="5" gap="2">
-                        {queue.map((team, index) => (
-                          <li
-                            key={index}
-                            style={{ listStyle: "decimal", fontSize: "22px" }}
-                          >
-                            <Text size="6" weight="bold">
-                              {team.number}
-                            </Text>
-                          </li>
-                        ))}
-                      </Grid>
-                    </ol>
-                  </Box>
+                  <CurrentQueueList queue={queue} getTeamIconButton={getTeamIconButton} />
                 </Inset>
               </Card>
             </Flex>
@@ -306,101 +536,7 @@ const QueuePage = () => {
           </Flex>
           <Card style={{ flex: 1, overflow: "hidden" }}>
             <Inset>
-              <Box style={{ height: "100%", overflow: "hidden", position: "relative" }}>
-                {filteredSchedule.length > 0 ? (
-                  <>
-                    {/* Pinned first 2 rows */}
-                    <Box style={{
-                      position: "relative",
-                      zIndex: 10,
-                      backgroundColor: "var(--color-background)",
-                      borderBottom: "2px solid var(--gray-6)"
-                    }}>
-                      <Table.Root size="2" variant="surface">
-                        <Table.Header>
-                          <Table.Row>
-                            <Table.ColumnHeaderCell style={{ width: "120px" }}>
-                              <Text size="5" weight="bold">Time</Text>
-                            </Table.ColumnHeaderCell>
-                            {filteredSchedule[0]?.teams.map((_, panelIndex) => (
-                              <Table.ColumnHeaderCell key={panelIndex} style={{ width: "150px" }}>
-                              </Table.ColumnHeaderCell>
-                            ))}
-                          </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                          {filteredSchedule.slice(0, 2).map((slot, index) => (
-                            <Table.Row key={index} style={{ backgroundColor: index === 0 ? "lightgreen" : "transparent" }}>
-                              <Table.Cell>
-                                <Text size="6" weight="bold">{slot.time}</Text>
-                              </Table.Cell>
-                              {slot.teams.map((team, teamIndex) => (
-                                <Table.Cell key={teamIndex}>
-                                  <Text size="5" weight="medium">{team}</Text>
-                                </Table.Cell>
-                              ))}
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Root>
-                    </Box>
-
-                    {/* Scrolling section for remaining rows */}
-                    {filteredSchedule.length > 2 && (
-                      <Box
-                        style={{
-                          height: "calc(100% - 200px)",
-                          overflow: "hidden",
-                          position: "relative"
-                        }}
-                      >
-                        <Box
-                          className="judging-scroll"
-                          style={{
-                            animation: "scrollJudging 30s linear infinite",
-                            paddingTop: "10px"
-                          }}
-                        >
-                          <Table.Root size="2" variant="surface">
-                            <Table.Body>
-                              {/* First loop of content */}
-                              {filteredSchedule.slice(2).map((slot, index) => (
-                                <Table.Row key={`first-${index}`}>
-                                  <Table.Cell style={{ width: "120px" }}>
-                                    <Text size="6" weight="bold">{slot.time}</Text>
-                                  </Table.Cell>
-                                  {slot.teams.map((team, teamIndex) => (
-                                    <Table.Cell key={teamIndex} style={{ width: "150px" }}>
-                                      <Text size="5" weight="medium">{team}</Text>
-                                    </Table.Cell>
-                                  ))}
-                                </Table.Row>
-                              ))}
-                              {/* Second loop for seamless scrolling */}
-                              {filteredSchedule.slice(2).map((slot, index) => (
-                                <Table.Row key={`second-${index}`}>
-                                  <Table.Cell style={{ width: "120px" }}>
-                                    <Text size="6" weight="bold">{slot.time}</Text>
-                                  </Table.Cell>
-                                  {slot.teams.map((team, teamIndex) => (
-                                    <Table.Cell key={teamIndex} style={{ width: "150px" }}>
-                                      <Text size="5" weight="medium">{team}</Text>
-                                    </Table.Cell>
-                                  ))}
-                                </Table.Row>
-                              ))}
-                            </Table.Body>
-                          </Table.Root>
-                        </Box>
-                      </Box>
-                    )}
-                  </>
-                ) : (
-                  <Flex align="center" justify="center" style={{ height: "100%" }}>
-                    <Text size="5" color="gray">No upcoming judging slots</Text>
-                  </Flex>
-                )}
-              </Box>
+              <JudgingScheduleTable filteredSchedule={filteredSchedule} getTimeSlotIconButton={getTimeSlotIconButton} />
             </Inset>
           </Card>
         </Flex>
