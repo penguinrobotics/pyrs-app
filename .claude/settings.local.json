@@ -14,7 +14,8 @@
       "Bash(npm ls:*)",
       "WebFetch(domain:www.radix-ui.com)",
       "Bash(tasklist:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

@@ -30,6 +30,10 @@ if %ERRORLEVEL% EQU 0 (
         del "data\judging_schedule.json"
         echo Deleted data\judging_schedule.json
     )
+    if exist "data\queue_settings.json" (
+        del "data\queue_settings.json"
+        echo Deleted data\queue_settings.json (will reset to defaults: 12:00 PM cutoff, queue open)
+    )
 )
 
 echo.

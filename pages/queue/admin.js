@@ -11,7 +11,6 @@ import {
   Grid,
   IconButton,
   Inset,
-  Select,
   Slider,
   Spinner,
   Switch,
@@ -25,7 +24,6 @@ import {
   DotsHorizontalIcon,
   GearIcon,
   HomeIcon,
-  SpeakerLoudIcon,
 } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
 import { useTTS, announceTeamServed } from "../../lib/useTTS";
@@ -33,17 +31,36 @@ import { useTTS, announceTeamServed } from "../../lib/useTTS";
 const AdminPage = () => {
   const router = useRouter();
   // Get real-time queue data from WebSocket
-  const { nowServing, queue, isConnected } = usePyrsAppData();
+  const { nowServing, queue, isConnected, queueSettings } = usePyrsAppData();
+
+  // Field button colors (cycle through these)
+  const fieldColors = ["red", "green", "blue", "yellow", "orange", "purple", "cyan", "pink"];
 
   // Initialize TTS
   const tts = useTTS();
   const prevNowServingRef = useRef([]);
+  const isInitialLoadRef = useRef(true);
 
   // TTS Settings state
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState("");
-  const [ttsRate, setTtsRate] = useState(0.9);
+  const ttsRate = 0.9; // Fixed speech rate
   const [ttsVolume, setTtsVolume] = useState(1.0);
+
+  // Queue Settings state
+  const [skillsCutoffTime, setSkillsCutoffTime] = useState("12:00 PM");
+  const [skillsTurnoverTime, setSkillsTurnoverTime] = useState(5);
+  const [skillsQueueManuallyOpen, setSkillsQueueManuallyOpen] = useState(false);
+  const [numberOfFields, setNumberOfFields] = useState(4);
+  const [numberOfFieldsInput, setNumberOfFieldsInput] = useState("4");
+
+  // Track if settings have changed
+  const settingsChanged = queueSettings && (
+    skillsCutoffTime !== (queueSettings.skillsCutoffTime || "12:00 PM") ||
+    skillsTurnoverTime !== (queueSettings.skillsTurnoverTime || 5) ||
+    skillsQueueManuallyOpen !== (queueSettings.skillsQueueManuallyOpen || false) ||
+    numberOfFields !== (queueSettings.numberOfFields || 4)
+  );
 
   // Load TTS settings from localStorage
   useEffect(() => {
@@ -53,7 +70,6 @@ const AdminPage = () => {
         const settings = JSON.parse(savedSettings);
         setTtsEnabled(settings.enabled ?? true);
         setSelectedVoice(settings.voice ?? "");
-        setTtsRate(settings.rate ?? 0.9);
         setTtsVolume(settings.volume ?? 1.0);
       } catch (e) {
         console.error("Failed to load TTS settings:", e);
@@ -73,11 +89,66 @@ const AdminPage = () => {
     const settings = {
       enabled: ttsEnabled,
       voice: selectedVoice,
-      rate: ttsRate,
       volume: ttsVolume,
     };
     localStorage.setItem("ttsSettings", JSON.stringify(settings));
-  }, [ttsEnabled, selectedVoice, ttsRate, ttsVolume]);
+  }, [ttsEnabled, selectedVoice, ttsVolume]);
+
+  // Load queue settings from WebSocket
+  useEffect(() => {
+    if (queueSettings) {
+      setSkillsCutoffTime(queueSettings.skillsCutoffTime || "12:00 PM");
+      setSkillsTurnoverTime(queueSettings.skillsTurnoverTime || 5);
+      setSkillsQueueManuallyOpen(queueSettings.skillsQueueManuallyOpen || false);
+      const fields = queueSettings.numberOfFields || 4;
+      setNumberOfFields(fields);
+      setNumberOfFieldsInput(String(fields));
+    }
+  }, [queueSettings]);
+
+  // Save queue settings to server
+  const handleSaveSettings = async () => {
+    try {
+      await fetch('/api/queue/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          skillsCutoffTime,
+          skillsTurnoverTime,
+          skillsQueueManuallyOpen,
+          numberOfFields
+        })
+      });
+    } catch (e) {
+      console.error('Failed to save settings:', e);
+    }
+  };
+
+  // Time conversion helpers
+  const convertTo24Hour = (time12) => {
+    const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return "12:00";
+
+    let hours = parseInt(match[1]);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+
+    return `${hours.toString().padStart(2, '0')}:${minutes}`;
+  };
+
+  const convertTo12Hour = (time24) => {
+    const [hours24, minutes] = time24.split(':');
+    let hours = parseInt(hours24);
+    const period = hours >= 12 ? 'PM' : 'AM';
+
+    if (hours === 0) hours = 12;
+    else if (hours > 12) hours -= 12;
+
+    return `${hours}:${minutes} ${period}`;
+  };
 
   const handleNext = async (field) => {
     await fetch(`/api/serve`, {
@@ -111,6 +182,13 @@ const AdminPage = () => {
 
   // Announce when a team is served
   useEffect(() => {
+    // Skip announcements on initial page load
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      prevNowServingRef.current = nowServing;
+      return;
+    }
+
     if (!tts.isSupported || !ttsEnabled) return;
 
     // Find newly added teams
@@ -130,7 +208,7 @@ const AdminPage = () => {
 
     // Update ref for next comparison
     prevNowServingRef.current = nowServing;
-  }, [nowServing, tts, ttsEnabled, selectedVoice, ttsRate, ttsVolume]);
+  }, [nowServing, tts, ttsEnabled, selectedVoice, ttsVolume]);
 
   return (
     <>
@@ -157,7 +235,7 @@ const AdminPage = () => {
                 size="3"
                 variant="ghost"
                 style={{ position: "absolute", right: 0 }}
-                title="TTS Settings"
+                title="Queue Settings"
               >
                 <GearIcon />
               </IconButton>
@@ -165,15 +243,54 @@ const AdminPage = () => {
             <Dialog.Content style={{ maxWidth: 450 }}>
               <Dialog.Title>
                 <Flex align="center" gap="2">
-                  <SpeakerLoudIcon />
-                  Text-to-Speech Settings
+                  <GearIcon />
+                  Queue Settings
                 </Flex>
               </Dialog.Title>
-              <Dialog.Description size="2" mb="4">
-                Configure audio announcements when teams are served
-              </Dialog.Description>
 
               <Flex direction="column" gap="4">
+                {/* Number of Fields */}
+                <Flex direction="column" gap="2">
+                  <Text size="2" weight="medium">
+                    Number of fields
+                  </Text>
+                  <input
+                    type="number"
+                    value={numberOfFieldsInput}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNumberOfFieldsInput(value);
+                      if (value !== '') {
+                        const numValue = parseInt(value);
+                        if (!isNaN(numValue) && numValue >= 1 && numValue <= 8) {
+                          setNumberOfFields(numValue);
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || isNaN(parseInt(value))) {
+                        setNumberOfFieldsInput(String(numberOfFields));
+                      } else {
+                        const numValue = Math.max(1, Math.min(8, parseInt(value)));
+                        setNumberOfFields(numValue);
+                        setNumberOfFieldsInput(String(numValue));
+                      }
+                    }}
+                    min={1}
+                    max={8}
+                    style={{
+                      padding: '8px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--gray-6)',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Text size="1" color="gray">
+                    Number of fields available for serving teams
+                  </Text>
+                </Flex>
+
                 {/* Enable/Disable TTS */}
                 <Flex align="center" justify="between">
                   <Text size="2" weight="medium">
@@ -182,57 +299,6 @@ const AdminPage = () => {
                   <Switch
                     checked={ttsEnabled}
                     onCheckedChange={setTtsEnabled}
-                  />
-                </Flex>
-
-                {/* Voice Selection */}
-                {tts.voices.length > 0 && (
-                  <Flex direction="column" gap="2">
-                    <Flex justify="between" align="center">
-                      <Text size="2" weight="medium">
-                        Voice
-                      </Text>
-                      {tts.defaultVoice && selectedVoice === tts.defaultVoice && (
-                        <Text size="1" color="green">
-                          Google US English ✓
-                        </Text>
-                      )}
-                    </Flex>
-                    <Select.Root
-                      value={selectedVoice}
-                      onValueChange={setSelectedVoice}
-                      disabled={!ttsEnabled}
-                    >
-                      <Select.Trigger placeholder="Select voice..." />
-                      <Select.Content>
-                        {tts.voices.map((voice) => (
-                          <Select.Item key={voice.name} value={voice.name}>
-                            {voice.name} ({voice.lang})
-                            {voice.name === tts.defaultVoice && " [Default]"}
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select.Root>
-                  </Flex>
-                )}
-
-                {/* Speech Rate */}
-                <Flex direction="column" gap="2">
-                  <Flex justify="between">
-                    <Text size="2" weight="medium">
-                      Speech rate
-                    </Text>
-                    <Text size="2" color="gray">
-                      {ttsRate.toFixed(1)}x
-                    </Text>
-                  </Flex>
-                  <Slider
-                    value={[ttsRate]}
-                    onValueChange={(values) => setTtsRate(values[0])}
-                    min={0.5}
-                    max={2.0}
-                    step={0.1}
-                    disabled={!ttsEnabled}
                   />
                 </Flex>
 
@@ -256,29 +322,66 @@ const AdminPage = () => {
                   />
                 </Flex>
 
-                {/* Test Button */}
-                <Button
-                  onClick={() => {
-                    if (ttsEnabled) {
-                      // Test with example: 10012A → "one hundred twelve Alpha"
-                      announceTeamServed(
-                        { number: "10012A" },
-                        1,
-                        tts,
-                        {
-                          voice: selectedVoice,
-                          rate: ttsRate,
-                          volume: ttsVolume,
-                        }
-                      );
-                    }
-                  }}
-                  disabled={!ttsEnabled || !tts.isSupported}
-                  variant="soft"
-                >
-                  <SpeakerLoudIcon />
-                  Test announcement
-                </Button>
+                {/* Skills Queue Cutoff Time */}
+                <Flex direction="column" gap="2">
+                  <Text size="2" weight="medium">
+                    Skills queue cutoff time
+                  </Text>
+                  <input
+                    type="time"
+                    value={convertTo24Hour(skillsCutoffTime)}
+                    onChange={(e) => {
+                      setSkillsCutoffTime(convertTo12Hour(e.target.value));
+                    }}
+                    style={{
+                      padding: '8px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--gray-6)',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Text size="1" color="gray">
+                    Queue closes when time-based capacity is full
+                  </Text>
+                </Flex>
+
+                {/* Skills Turnover Time */}
+                <Flex direction="column" gap="2">
+                  <Flex justify="between">
+                    <Text size="2" weight="medium">
+                      Average time per team
+                    </Text>
+                    <Text size="2" color="gray">
+                      {skillsTurnoverTime} min
+                    </Text>
+                  </Flex>
+                  <Slider
+                    value={[skillsTurnoverTime]}
+                    onValueChange={(values) => setSkillsTurnoverTime(values[0])}
+                    min={1}
+                    max={15}
+                    step={1}
+                  />
+                  <Text size="1" color="gray">
+                    Used to calculate queue capacity
+                  </Text>
+                </Flex>
+
+                {/* Manual Override */}
+                <Flex align="center" justify="between">
+                  <Flex direction="column" gap="1">
+                    <Text size="2" weight="medium">
+                      Manually re-open queue
+                    </Text>
+                    <Text size="1" color="gray">
+                      Overrides automatic cutoff
+                    </Text>
+                  </Flex>
+                  <Switch
+                    checked={skillsQueueManuallyOpen}
+                    onCheckedChange={setSkillsQueueManuallyOpen}
+                  />
+                </Flex>
 
                 {!tts.isSupported && (
                   <Text size="2" color="red">
@@ -289,8 +392,11 @@ const AdminPage = () => {
 
               <Flex gap="3" mt="4" justify="end">
                 <Dialog.Close>
-                  <Button variant="soft" color="gray">
-                    Close
+                  <Button
+                    onClick={handleSaveSettings}
+                    disabled={!settingsChanged}
+                  >
+                    Save
                   </Button>
                 </Dialog.Close>
               </Flex>
@@ -305,23 +411,18 @@ const AdminPage = () => {
               </Text>
               <img src="/assets/catjump.webp" alt="catjump" width={32} height={32} />
             </Flex>
-            <Grid columns="4" gap="2">
-              <Button onClick={() => handleNext(1)} size="3" color="red">
-                <ChevronLeftIcon />
-                1
-              </Button>
-              <Button onClick={() => handleNext(2)} size="3" color="green">
-                <ChevronLeftIcon />
-                2
-              </Button>
-              <Button onClick={() => handleNext(3)} size="3" color="blue">
-                <ChevronLeftIcon />
-                3
-              </Button>
-              <Button onClick={() => handleNext(4)} size="3" color="yellow">
-                <ChevronLeftIcon />
-                4
-              </Button>
+            <Grid columns={numberOfFields.toString()} gap="2">
+              {Array.from({ length: numberOfFields }, (_, i) => i + 1).map((fieldNum) => (
+                <Button
+                  key={fieldNum}
+                  onClick={() => handleNext(fieldNum)}
+                  size="3"
+                  color={fieldColors[(fieldNum - 1) % fieldColors.length]}
+                >
+                  <ChevronLeftIcon />
+                  {fieldNum}
+                </Button>
+              ))}
             </Grid>
             <Card>
               <Inset>

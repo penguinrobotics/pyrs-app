@@ -1,0 +1,7 @@
+{
+  "skillsCutoffTime": "4:00 PM",
+  "skillsTurnoverTime": 5,
+  "skillsQueueManuallyOpen": false,
+  "skillsQueueClosed": false,
+  "numberOfFields": 4
+}

@@ -29,6 +29,13 @@ const {
   setJudgingState
 } = require('./lib/fileOperations');
 const { initAutoDequeue, getServiceStatus } = require('./lib/autoDequeueService');
+const {
+  initializeSettingsFromFile,
+  getSettings,
+  updateSettings,
+  settingsLock
+} = require('./lib/queueSettings');
+const { calculateQueueStatus } = require('./lib/queueCapacity');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -44,6 +51,8 @@ initializeFromFile();
 initializeRefereeFromFile();
 // Initialize judging data from file
 initializeJudgingFromFile();
+// Initialize queue settings from file
+initializeSettingsFromFile();
 
 // Helper function to parse time and add minutes
 function parseTime(timeStr) {
@@ -166,6 +175,23 @@ app.prepare().then(() => {
             console.log('[API /api/add] Adding team:', team);
             const { nowServing, queue } = getState();
 
+            // Check queue status
+            const settings = getSettings();
+            const status = calculateQueueStatus(settings, { nowServing, queue });
+
+            // If should permanently close, update settings
+            if (status.shouldPermanentlyClose) {
+              updateSettings({ skillsQueueClosed: true });
+            }
+
+            // Reject if queue is closed
+            if (!status.isOpen) {
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Queue is closed' }));
+              writeLock.release();
+              return;
+            }
+
             if (
               queue.find((t) => t.number === team) ||
               nowServing.find((t) => t.number === team)
@@ -176,6 +202,13 @@ app.prepare().then(() => {
               queue.push({ number: team, at: null });
               setState(nowServing, queue);
               updateFile();
+
+              // Check if this addition closed the queue
+              const newStatus = calculateQueueStatus(settings, { nowServing, queue });
+              if (newStatus.shouldPermanentlyClose) {
+                updateSettings({ skillsQueueClosed: true });
+              }
+
               global.broadcastQueueData();
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ team }));
@@ -376,6 +409,61 @@ app.prepare().then(() => {
         return;
       }
 
+      if (pathname === '/api/queue/settings' && req.method === 'GET') {
+        const settings = getSettings();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(settings));
+        return;
+      }
+
+      if (pathname === '/api/queue/settings' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+          const release = await settingsLock.acquire();
+          try {
+            const newSettings = JSON.parse(body);
+
+            // Validate inputs
+            if (newSettings.skillsTurnoverTime && newSettings.skillsTurnoverTime < 1) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Turnover time must be >= 1' }));
+              return;
+            }
+
+            // When manual override is toggled ON, clear the closed flag
+            if (newSettings.skillsQueueManuallyOpen === true) {
+              newSettings.skillsQueueClosed = false;
+            }
+
+            updateSettings(newSettings);
+
+            // Broadcast updated settings to all clients
+            if (global.broadcastQueueData) {
+              global.broadcastQueueData();
+            }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(getSettings()));
+          } catch (error) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message }));
+          } finally {
+            release();
+          }
+        });
+        return;
+      }
+
+      if (pathname === '/api/queue/status' && req.method === 'GET') {
+        const settings = getSettings();
+        const queueState = getState();
+        const status = calculateQueueStatus(settings, queueState);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(status));
+        return;
+      }
+
       if (pathname === '/api/judging/schedule' && req.method === 'GET') {
         try {
           const schedule = getJudgingState();
@@ -456,7 +544,8 @@ app.prepare().then(() => {
   function broadcastQueueData() {
     const { nowServing, queue } = getState();
     const { violations } = getRefereeState();
-    const data = JSON.stringify({ nowServing, queue, violations });
+    const queueSettings = getSettings();
+    const data = JSON.stringify({ nowServing, queue, violations, queueSettings });
 
     let sentCount = 0;
     wss.clients.forEach((client) => {
@@ -476,7 +565,8 @@ app.prepare().then(() => {
     // Send initial data immediately
     const { nowServing, queue } = getState();
     const { violations } = getRefereeState();
-    ws.send(JSON.stringify({ nowServing, queue, violations }));
+    const queueSettings = getSettings();
+    ws.send(JSON.stringify({ nowServing, queue, violations, queueSettings }));
 
     // Setup heartbeat to detect broken connections
     ws.isAlive = true;

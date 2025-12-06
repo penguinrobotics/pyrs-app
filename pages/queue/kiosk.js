@@ -1,16 +1,18 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
-import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
+import { Button, Card, Dialog, Flex, Text } from "@radix-ui/themes";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
+import { calculateQueueStatus } from "../../lib/queueCapacity";
 
 const KioskPage = () => {
   const [teams, setTeams] = useState([]);
   const [open, setOpen] = useState(false);
   const [team, setTeam] = useState("");
   const [judgingSchedule, setJudgingSchedule] = useState(null);
+  const [queueStatus, setQueueStatus] = useState(null);
 
   // Get real-time queue data from WebSocket
-  const { nowServing, queue, isConnected } = usePyrsAppData();
+  const { nowServing, queue, isConnected, queueSettings } = usePyrsAppData();
 
   // Compute queued teams from WebSocket data
   const queued = useMemo(() => {
@@ -37,6 +39,26 @@ const KioskPage = () => {
     };
     getSchedule();
   }, []);
+
+  // Calculate queue status client-side
+  useEffect(() => {
+    if (!queueSettings) return;
+
+    const updateStatus = () => {
+      const status = calculateQueueStatus(
+        queueSettings,
+        { nowServing, queue }
+      );
+      setQueueStatus(status);
+    };
+
+    updateStatus();
+
+    // Recalculate every minute for time-based updates
+    const interval = setInterval(updateStatus, 60000);
+
+    return () => clearInterval(interval);
+  }, [queueSettings, nowServing, queue]);
 
   const handleTeamClick = async (team) => {
     setTeam(team);
@@ -98,13 +120,58 @@ const KioskPage = () => {
           </Text>
           <img src="/assets/catjam.webp" alt="catjam" width={64} height={64} />
         </Flex>
+
+        {/* Closed Queue Message */}
+        {queueStatus && !queueStatus.isOpen && (
+          <Card style={{ backgroundColor: 'var(--red-3)', padding: '20px' }}>
+            <Flex direction="column" gap="2" align="center">
+              <Text size="6" weight="bold" color="red">
+                Skills queue is now closed
+              </Text>
+              {queueStatus.reason === 'capacity_full' && (
+                <Text size="3" color="gray">
+                  Queue capacity has been reached for today
+                </Text>
+              )}
+              {queueStatus.reason === 'past_cutoff' && (
+                <Text size="3" color="gray">
+                  Cutoff time has passed
+                </Text>
+              )}
+              {queueStatus.reason === 'permanently_closed' && (
+                <Text size="3" color="gray">
+                  Queue has been closed
+                </Text>
+              )}
+            </Flex>
+          </Card>
+        )}
+
+        {/* Capacity Indicator */}
+        {queueStatus && queueStatus.isOpen && (
+          <Flex justify="center" gap="2">
+            {queueStatus.reason === 'manual' ? (
+              <Text size="3" color="green" weight="medium">
+                Queue manually opened
+              </Text>
+            ) : (
+              <Text size="3" color="gray">
+                Remaining spots: <Text weight="bold">{queueStatus.remainingSlots}</Text> / {queueStatus.totalCapacity}
+              </Text>
+            )}
+          </Flex>
+        )}
+
         <Flex direction="row" gap="3" wrap="wrap">
           {teams.map((t, index) => (
             <Button
               key={index}
               size="4"
               style={{ width: "120px", height: "70px" }}
-              disabled={queued.includes(t.number)}
+              disabled={
+                queued.includes(t.number) ||
+                (queueStatus && !queueStatus.isOpen)
+              }
               onClick={() => handleTeamClick(t.number)}
             >
               {t.number}
