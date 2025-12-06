@@ -474,8 +474,8 @@ const QueuePage = () => {
         `}</style>
       </Head>
       <Flex direction="column" gap="6" style={{ height: "90vh" }}>
-        {/* Skills Queue Section - 55% */}
-        <Flex direction="column" gap="4" style={{ height: "55%", overflow: "hidden" }}>
+        {/* Skills Queue Section - 55% (or 100% when no judging schedule) */}
+        <Flex direction="column" gap="4" style={{ height: judgingSchedule.length === 0 ? "100%" : "55%", overflow: "hidden" }}>
           <Flex direction="row" align="center" justify="center" gap="4">
             <Text weight="bold" size="8" align="center">
               Skills Queue
@@ -527,19 +527,21 @@ const QueuePage = () => {
           </Flex>
         </Flex>
 
-        {/* Judging Queue Section - 45% */}
-        <Flex direction="column" gap="4" style={{ height: "45%", overflow: "hidden" }}>
-          <Flex direction="row" align="center" justify="center" gap="4">
-            <Text weight="bold" size="8" align="center">
-              Judging Queue
-            </Text>
+        {/* Judging Queue Section - 45% (hidden when no schedule) */}
+        {judgingSchedule.length > 0 && (
+          <Flex direction="column" gap="4" style={{ height: "45%", overflow: "hidden" }}>
+            <Flex direction="row" align="center" justify="center" gap="4">
+              <Text weight="bold" size="8" align="center">
+                Judging Queue
+              </Text>
+            </Flex>
+            <Card style={{ flex: 1, overflow: "hidden" }}>
+              <Inset>
+                <JudgingScheduleTable filteredSchedule={filteredSchedule} getTimeSlotIconButton={getTimeSlotIconButton} />
+              </Inset>
+            </Card>
           </Flex>
-          <Card style={{ flex: 1, overflow: "hidden" }}>
-            <Inset>
-              <JudgingScheduleTable filteredSchedule={filteredSchedule} getTimeSlotIconButton={getTimeSlotIconButton} />
-            </Inset>
-          </Card>
-        </Flex>
+        )}
       </Flex>
     </>
   );
