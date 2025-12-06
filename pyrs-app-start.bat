@@ -32,7 +32,7 @@ if %ERRORLEVEL% EQU 0 (
     )
     if exist "data\queue_settings.json" (
         del "data\queue_settings.json"
-        echo Deleted data\queue_settings.json (will reset to defaults: 12:00 PM cutoff, queue open)
+        echo Deleted data\queue_settings.json
     )
 )
 
