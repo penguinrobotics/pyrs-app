@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import ReactTimeAgo from "react-time-ago";
@@ -11,7 +11,10 @@ import {
   Grid,
   IconButton,
   Inset,
+  Select,
+  Slider,
   Spinner,
+  Switch,
   Table,
   Text,
 } from "@radix-ui/themes";
@@ -20,14 +23,61 @@ import {
   ChevronRightIcon,
   Cross2Icon,
   DotsHorizontalIcon,
+  GearIcon,
   HomeIcon,
+  SpeakerLoudIcon,
 } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
+import { useTTS, announceTeamServed } from "../../lib/useTTS";
 
 const AdminPage = () => {
   const router = useRouter();
   // Get real-time queue data from WebSocket
   const { nowServing, queue, isConnected } = usePyrsAppData();
+
+  // Initialize TTS
+  const tts = useTTS();
+  const prevNowServingRef = useRef([]);
+
+  // TTS Settings state
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [selectedVoice, setSelectedVoice] = useState("");
+  const [ttsRate, setTtsRate] = useState(0.9);
+  const [ttsVolume, setTtsVolume] = useState(1.0);
+
+  // Load TTS settings from localStorage
+  useEffect(() => {
+    const savedSettings = localStorage.getItem("ttsSettings");
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        setTtsEnabled(settings.enabled ?? true);
+        setSelectedVoice(settings.voice ?? "");
+        setTtsRate(settings.rate ?? 0.9);
+        setTtsVolume(settings.volume ?? 1.0);
+      } catch (e) {
+        console.error("Failed to load TTS settings:", e);
+      }
+    }
+  }, []);
+
+  // Auto-select Google female voice if no voice is selected
+  useEffect(() => {
+    if (tts.defaultVoice && !selectedVoice) {
+      setSelectedVoice(tts.defaultVoice);
+    }
+  }, [tts.defaultVoice, selectedVoice]);
+
+  // Save TTS settings to localStorage
+  useEffect(() => {
+    const settings = {
+      enabled: ttsEnabled,
+      voice: selectedVoice,
+      rate: ttsRate,
+      volume: ttsVolume,
+    };
+    localStorage.setItem("ttsSettings", JSON.stringify(settings));
+  }, [ttsEnabled, selectedVoice, ttsRate, ttsVolume]);
 
   const handleNext = async (field) => {
     await fetch(`/api/serve`, {
@@ -59,6 +109,28 @@ const AdminPage = () => {
     });
   };
 
+  // Announce when a team is served
+  useEffect(() => {
+    if (!tts.isSupported || !ttsEnabled) return;
+
+    // Find newly added teams
+    const prevTeams = prevNowServingRef.current;
+    const newlyServed = nowServing.filter(
+      (team) => !prevTeams.some((prev) => prev.number === team.number)
+    );
+
+    // Announce each newly served team
+    newlyServed.forEach((team) => {
+      announceTeamServed(team, team.field, tts, {
+        voice: selectedVoice,
+        rate: ttsRate,
+        volume: ttsVolume,
+      });
+    });
+
+    // Update ref for next comparison
+    prevNowServingRef.current = nowServing;
+  }, [nowServing, tts, ttsEnabled, selectedVoice, ttsRate, ttsVolume]);
 
   return (
     <>
@@ -79,6 +151,151 @@ const AdminPage = () => {
           <Text weight="bold" size="8" align="center">
             Queue Admin
           </Text>
+          <Dialog.Root>
+            <Dialog.Trigger>
+              <IconButton
+                size="3"
+                variant="ghost"
+                style={{ position: "absolute", right: 0 }}
+                title="TTS Settings"
+              >
+                <GearIcon />
+              </IconButton>
+            </Dialog.Trigger>
+            <Dialog.Content style={{ maxWidth: 450 }}>
+              <Dialog.Title>
+                <Flex align="center" gap="2">
+                  <SpeakerLoudIcon />
+                  Text-to-Speech Settings
+                </Flex>
+              </Dialog.Title>
+              <Dialog.Description size="2" mb="4">
+                Configure audio announcements when teams are served
+              </Dialog.Description>
+
+              <Flex direction="column" gap="4">
+                {/* Enable/Disable TTS */}
+                <Flex align="center" justify="between">
+                  <Text size="2" weight="medium">
+                    Enable announcements
+                  </Text>
+                  <Switch
+                    checked={ttsEnabled}
+                    onCheckedChange={setTtsEnabled}
+                  />
+                </Flex>
+
+                {/* Voice Selection */}
+                {tts.voices.length > 0 && (
+                  <Flex direction="column" gap="2">
+                    <Flex justify="between" align="center">
+                      <Text size="2" weight="medium">
+                        Voice
+                      </Text>
+                      {tts.defaultVoice && selectedVoice === tts.defaultVoice && (
+                        <Text size="1" color="green">
+                          Google US English ✓
+                        </Text>
+                      )}
+                    </Flex>
+                    <Select.Root
+                      value={selectedVoice}
+                      onValueChange={setSelectedVoice}
+                      disabled={!ttsEnabled}
+                    >
+                      <Select.Trigger placeholder="Select voice..." />
+                      <Select.Content>
+                        {tts.voices.map((voice) => (
+                          <Select.Item key={voice.name} value={voice.name}>
+                            {voice.name} ({voice.lang})
+                            {voice.name === tts.defaultVoice && " [Default]"}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Root>
+                  </Flex>
+                )}
+
+                {/* Speech Rate */}
+                <Flex direction="column" gap="2">
+                  <Flex justify="between">
+                    <Text size="2" weight="medium">
+                      Speech rate
+                    </Text>
+                    <Text size="2" color="gray">
+                      {ttsRate.toFixed(1)}x
+                    </Text>
+                  </Flex>
+                  <Slider
+                    value={[ttsRate]}
+                    onValueChange={(values) => setTtsRate(values[0])}
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    disabled={!ttsEnabled}
+                  />
+                </Flex>
+
+                {/* Volume */}
+                <Flex direction="column" gap="2">
+                  <Flex justify="between">
+                    <Text size="2" weight="medium">
+                      Volume
+                    </Text>
+                    <Text size="2" color="gray">
+                      {Math.round(ttsVolume * 100)}%
+                    </Text>
+                  </Flex>
+                  <Slider
+                    value={[ttsVolume]}
+                    onValueChange={(values) => setTtsVolume(values[0])}
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    disabled={!ttsEnabled}
+                  />
+                </Flex>
+
+                {/* Test Button */}
+                <Button
+                  onClick={() => {
+                    if (ttsEnabled) {
+                      // Test with example: 10012A → "one hundred twelve Alpha"
+                      announceTeamServed(
+                        { number: "10012A" },
+                        1,
+                        tts,
+                        {
+                          voice: selectedVoice,
+                          rate: ttsRate,
+                          volume: ttsVolume,
+                        }
+                      );
+                    }
+                  }}
+                  disabled={!ttsEnabled || !tts.isSupported}
+                  variant="soft"
+                >
+                  <SpeakerLoudIcon />
+                  Test announcement
+                </Button>
+
+                {!tts.isSupported && (
+                  <Text size="2" color="red">
+                    Text-to-speech is not supported in this browser
+                  </Text>
+                )}
+              </Flex>
+
+              <Flex gap="3" mt="4" justify="end">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray">
+                    Close
+                  </Button>
+                </Dialog.Close>
+              </Flex>
+            </Dialog.Content>
+          </Dialog.Root>
         </Flex>
         <Grid columns={{ initial: '1', md: '2' }} gap="6" mt="4">
           <Flex gap="4" direction="column">
