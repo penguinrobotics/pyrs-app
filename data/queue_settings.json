@@ -1,5 +1,5 @@
 {
-  "skillsCutoffTime": "4:00 PM",
+  "skillsCutoffTime": "12:00 PM",
   "skillsTurnoverTime": 5,
   "skillsQueueManuallyOpen": false,
   "skillsQueueClosed": false,
