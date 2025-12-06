@@ -1,56 +1,65 @@
 import React, { useEffect, useState } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import {
   Box,
   Button,
   Card,
   Dialog,
   Flex,
+  IconButton,
   Inset,
   Select,
   Table,
   Text,
 } from "@radix-ui/themes";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { Cross2Icon, ChevronLeftIcon, HomeIcon } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../lib/usePyrsAppData";
 
 const RULES = [
-  { ruleId: "S1" },
-  { ruleId: "S2" },
-  { ruleId: "S3" },
-  { ruleId: "S4" },
-  { ruleId: "G1" },
-  { ruleId: "G2" },
-  { ruleId: "G3" },
-  { ruleId: "G4" },
-  { ruleId: "G5" },
-  { ruleId: "G6" },
-  { ruleId: "G7" },
-  { ruleId: "G8" },
-  { ruleId: "G9" },
-  { ruleId: "G10" },
-  { ruleId: "G11" },
-  { ruleId: "G12" },
-  { ruleId: "G13" },
-  { ruleId: "G14" },
-  { ruleId: "G15" },
-  { ruleId: "G16" },
-  { ruleId: "G17" },
-  { ruleId: "SG1" },
-  { ruleId: "SG2" },
-  { ruleId: "SG3" },
-  { ruleId: "SG4" },
-  { ruleId: "SG5" },
-  { ruleId: "SG6" },
-  { ruleId: "SG7" },
-  { ruleId: "SG8" },
-  { ruleId: "SG9" },
-  { ruleId: "SG10" },
-  { ruleId: "SG11" },
-  { ruleId: "T6" }
+  "S1",
+  "S2",
+  "S3",
+  "S4",
+  "S5",
+  "G1",
+  "G2",
+  "G3",
+  "G4",
+  "G5",
+  "GG1",
+  "GG2",
+  "GG3",
+  "GG4",
+  "GG5",
+  "GG6",
+  "GG7",
+  "GG8",
+  "GG9",
+  "GG10",
+  "GG11",
+  "GG12",
+  "GG13",
+  "GG14",
+  "GG15",
+  "GG16",
+  "GG17",
+  "GG18",
+  "SG1",
+  "SG2",
+  "SG3",
+  "SG4",
+  "SG5",
+  "SG6",
+  "SG7",
+  "SG8",
+  "SG9",
+  "SG10",
+  "SG11",
 ];
 
 const RefereePage = () => {
+  const router = useRouter();
   const [teams, setTeams] = useState([]);
   const { violations } = usePyrsAppData();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -158,9 +167,18 @@ const RefereePage = () => {
         <title>PYRS App - Referee</title>
       </Head>
       <Flex direction="column" gap="6">
-        <Flex direction="row" align="center" justify="center" gap="4">
+        <Flex direction="row" align="center" justify="center" gap="4" position="relative">
+          <IconButton
+            size="3"
+            variant="ghost"
+            onClick={() => router.push("/")}
+            style={{ position: "absolute", left: 0 }}
+          >
+            <ChevronLeftIcon />
+            <HomeIcon />
+          </IconButton>
           <Text weight="bold" size="8" align="center">
-            Referee Page
+            Referee
           </Text>
         </Flex>
         <Card>
@@ -196,8 +214,8 @@ const RefereePage = () => {
                       <Select.Trigger placeholder="Rule" style={{ flexGrow: 1 }} />
                       <Select.Content>
                         {RULES.map((rule) => (
-                          <Select.Item key={rule.ruleId} value={rule.ruleId}>
-                            {rule.ruleId}
+                          <Select.Item key={rule} value={rule}>
+                            {rule}
                           </Select.Item>
                         ))}
                       </Select.Content>

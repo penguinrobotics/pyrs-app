@@ -1,3 +1,11 @@
+// Load environment variables based on NODE_ENV
+const dotenv = require('dotenv');
+const path = require('path');
+
+// In production, use .env; in development, use .env.local
+const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.local';
+dotenv.config({ path: path.resolve(__dirname, envFile) });
+
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
@@ -5,7 +13,6 @@ const WebSocket = require('ws');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const path = require('path');
 const {
   initializeFromFile,
   updateFile,
@@ -21,6 +28,7 @@ const {
   getJudgingState,
   setJudgingState
 } = require('./lib/fileOperations');
+const { initAutoDequeue, getServiceStatus } = require('./lib/autoDequeueService');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -345,7 +353,8 @@ app.prepare().then(() => {
             teamData = JSON.parse(offlineData);
           } else {
             // Online mode: scrape from VEX Tournament Manager
-            const vexTmUrl = process.env.VEX_TM_URL || 'http://10.0.0.3/division1/teams';
+            const baseUrl = process.env.VEX_TM_BASE_URL || 'http://10.0.0.3';
+            const vexTmUrl = `${baseUrl}/division1/teams`;
             const html = await axios.get(vexTmUrl);
             const $ = cheerio.load(html.data);
 
@@ -408,6 +417,19 @@ app.prepare().then(() => {
             writeLock.release();
           }
         });
+        return;
+      }
+
+      if (pathname === '/api/auto-dequeue/status' && req.method === 'GET') {
+        try {
+          const status = getServiceStatus();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(status, null, 2));
+        } catch (error) {
+          console.error('Error fetching auto-dequeue status:', error);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to fetch status' }));
+        }
         return;
       }
 
@@ -500,6 +522,17 @@ app.prepare().then(() => {
     console.log('  - http://' + hostname + ':' + port + '/queue/current');
     console.log('  - http://' + hostname + ':' + port + '/queue/kiosk');
     console.log('  - http://' + hostname + ':' + port + '/referee');
+
+    // Initialize auto-dequeue service
+    const baseUrl = process.env.VEX_TM_BASE_URL || 'http://10.0.0.3';
+    const offlineMode = process.env.OFFLINE_MODE === 'true';
+
+    initAutoDequeue({
+      baseUrl,
+      pollIntervalMs: 5000,
+      offlineMode
+    });
+
     console.log('========================================');
   });
 });

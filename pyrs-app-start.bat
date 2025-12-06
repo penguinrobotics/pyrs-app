@@ -26,13 +26,17 @@ if %ERRORLEVEL% EQU 0 (
         del "data\referee_data.json"
         echo Deleted data\referee_data.json
     )
+    if exist "data\judging_schedule.json" (
+        del "data\judging_schedule.json"
+        echo Deleted data\judging_schedule.json
+    )
 )
 
 echo.
 echo Starting server...
 
 REM Start the Next.js server in a new window
-start "PYRS Server" cmd /k npm run dev
+start "PYRS Server" cmd /k npm run prod
 
 REM Wait for server to start
 echo Waiting for server to start...

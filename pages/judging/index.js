@@ -1,8 +1,12 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Button, Card, Flex, Text, TextField, Table, Dialog, Callout, Spinner } from '@radix-ui/themes';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import { Button, Card, Flex, Text, TextField, Table, Dialog, Callout, Spinner, IconButton } from '@radix-ui/themes';
+import { ChevronLeftIcon, HomeIcon } from '@radix-ui/react-icons';
 import { useReactToPrint } from 'react-to-print';
 
 export default function JudgingPage() {
+  const router = useRouter();
   const [teams, setTeams] = useState([]);
   const [formData, setFormData] = useState({
     startTime: '9:30 AM',
@@ -135,10 +139,23 @@ export default function JudgingPage() {
   };
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
-      <Flex direction="column" gap="6">
+    <>
+      <Head>
+        <title>PYRS App - Judging</title>
+      </Head>
+      <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+        <Flex direction="column" gap="6">
         {/* Header */}
-        <Flex direction="row" align="center" justify="center" gap="4">
+        <Flex direction="row" align="center" justify="center" gap="4" position="relative">
+          <IconButton
+            size="3"
+            variant="ghost"
+            onClick={() => router.push("/")}
+            style={{ position: "absolute", left: 0 }}
+          >
+            <ChevronLeftIcon />
+            <HomeIcon />
+          </IconButton>
           <Text weight="bold" size="8" align="center">
             Judging Schedule Generator
           </Text>
@@ -304,6 +321,7 @@ export default function JudgingPage() {
           </Flex>
         </Dialog.Content>
       </Dialog.Root>
-    </div>
+      </div>
+    </>
   );
 }

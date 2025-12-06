@@ -1,10 +1,12 @@
 import React, { useEffect } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import ReactTimeAgo from "react-time-ago";
 import {
   Box,
   Button,
   Card,
+  Dialog,
   Flex,
   Grid,
   IconButton,
@@ -17,10 +19,13 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Cross2Icon,
+  DotsHorizontalIcon,
+  HomeIcon,
 } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
 
 const AdminPage = () => {
+  const router = useRouter();
   // Get real-time queue data from WebSocket
   const { nowServing, queue, isConnected } = usePyrsAppData();
 
@@ -58,14 +63,22 @@ const AdminPage = () => {
   return (
     <>
       <Head>
-        <title>PYRS App - Admin</title>
+        <title>PYRS App - Queue Admin</title>
       </Head>
-      <Flex direction="column" gap="6">
-        <Flex direction="row" align="center" justify="center" gap="4">
+      <Flex direction="column" gap="5">
+        <Flex direction="row" align="center" justify="center" gap="4" position="relative">
+          <IconButton
+            size="3"
+            variant="ghost"
+            onClick={() => router.push("/")}
+            style={{ position: "absolute", left: 0 }}
+          >
+            <ChevronLeftIcon />
+            <HomeIcon />
+          </IconButton>
           <Text weight="bold" size="8" align="center">
-            Admin Page
+            Queue Admin
           </Text>
-          <img src="/assets/donut.png" alt="chipi" width={64} height={64} />
         </Flex>
         <Grid columns={{ initial: '1', md: '2' }} gap="6" mt="4">
           <Flex gap="4" direction="column">
@@ -134,30 +147,60 @@ const AdminPage = () => {
                             </Box>
                           </Table.Cell>
                           <Table.Cell>
-                            <Flex direction="row" gap="1" align="center" justify="center">
-                              <IconButton
-                                size="1"
-                                color="crimson"
-                                variant="surface"
-                                onClick={() => handleRemove(team.number)}
-                              >
-                                <Cross2Icon />
-                              </IconButton>
-                              <Button
-                                size="1"
-                                onClick={() => handleBack(team.number)}
-                                variant="surface"
-                              >
-                                <ChevronRightIcon />
-                              </Button>
-                              <Button
-                                size="1"
-                                onClick={() => handleBack(team.number, 5)}
-                                variant="surface"
-                              >
-                                <ChevronRightIcon />
-                                5
-                              </Button>
+                            <Flex align="center" justify="center">
+                              <Dialog.Root>
+                                <Dialog.Trigger>
+                                  <IconButton size="1" variant="surface">
+                                    <DotsHorizontalIcon />
+                                  </IconButton>
+                                </Dialog.Trigger>
+                                <Dialog.Content style={{ maxWidth: 400 }}>
+                                  <Flex direction="row" justify="between" align="top" mb="2">
+                                    <Dialog.Title>Team {team.number}</Dialog.Title>
+                                    <Dialog.Close>
+                                      <IconButton size="1" variant="ghost" color="gray">
+                                        <Cross2Icon />
+                                      </IconButton>
+                                    </Dialog.Close>
+                                  </Flex>
+                                  <Flex direction="column" gap="3">
+                                    <Dialog.Close>
+                                      <Button
+                                        size="3"
+                                        color="crimson"
+                                        variant="soft"
+                                        onClick={() => handleRemove(team.number)}
+                                        style={{ width: '100%' }}
+                                      >
+                                        <Cross2Icon />
+                                        Dequeue team
+                                      </Button>
+                                    </Dialog.Close>
+                                    <Dialog.Close>
+                                      <Button
+                                        size="3"
+                                        variant="soft"
+                                        onClick={() => handleBack(team.number)}
+                                        style={{ width: '100%' }}
+                                      >
+                                        <ChevronRightIcon />
+                                        Send to top of queue
+                                      </Button>
+                                    </Dialog.Close>
+                                    <Dialog.Close>
+                                      <Button
+                                        size="3"
+                                        variant="soft"
+                                        onClick={() => handleBack(team.number, 5)}
+                                        style={{ width: '100%' }}
+                                      >
+                                        <ChevronRightIcon />
+                                        Send back 5 spots
+                                      </Button>
+                                    </Dialog.Close>
+                                  </Flex>
+                                </Dialog.Content>
+                              </Dialog.Root>
                             </Flex>
                           </Table.Cell>
                         </Table.Row>
