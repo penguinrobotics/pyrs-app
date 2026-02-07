@@ -48,7 +48,7 @@ const AdminPage = () => {
   const [ttsVolume, setTtsVolume] = useState(1.0);
 
   // Queue Settings state
-  const [skillsCutoffTime, setSkillsCutoffTime] = useState("12:00 PM");
+  const [skillsCutoffTime, setSkillsCutoffTime] = useState("2/6 12:00 PM");
   const [skillsTurnoverTime, setSkillsTurnoverTime] = useState(5);
   const [skillsQueueManuallyOpen, setSkillsQueueManuallyOpen] = useState(false);
   const [numberOfFields, setNumberOfFields] = useState(4);
@@ -56,7 +56,7 @@ const AdminPage = () => {
 
   // Track if settings have changed
   const settingsChanged = queueSettings && (
-    skillsCutoffTime !== (queueSettings.skillsCutoffTime || "12:00 PM") ||
+    skillsCutoffTime !== (queueSettings.skillsCutoffTime || "2/6 12:00 PM") ||
     skillsTurnoverTime !== (queueSettings.skillsTurnoverTime || 5) ||
     skillsQueueManuallyOpen !== (queueSettings.skillsQueueManuallyOpen || false) ||
     numberOfFields !== (queueSettings.numberOfFields || 4)
@@ -97,7 +97,7 @@ const AdminPage = () => {
   // Load queue settings from WebSocket
   useEffect(() => {
     if (queueSettings) {
-      setSkillsCutoffTime(queueSettings.skillsCutoffTime || "12:00 PM");
+      setSkillsCutoffTime(queueSettings.skillsCutoffTime || "2/6 12:00 PM");
       setSkillsTurnoverTime(queueSettings.skillsTurnoverTime || 5);
       setSkillsQueueManuallyOpen(queueSettings.skillsQueueManuallyOpen || false);
       const fields = queueSettings.numberOfFields || 4;
@@ -122,32 +122,6 @@ const AdminPage = () => {
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
-  };
-
-  // Time conversion helpers
-  const convertTo24Hour = (time12) => {
-    const match = time12.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (!match) return "12:00";
-
-    let hours = parseInt(match[1]);
-    const minutes = match[2];
-    const period = match[3].toUpperCase();
-
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-
-    return `${hours.toString().padStart(2, '0')}:${minutes}`;
-  };
-
-  const convertTo12Hour = (time24) => {
-    const [hours24, minutes] = time24.split(':');
-    let hours = parseInt(hours24);
-    const period = hours >= 12 ? 'PM' : 'AM';
-
-    if (hours === 0) hours = 12;
-    else if (hours > 12) hours -= 12;
-
-    return `${hours}:${minutes} ${period}`;
   };
 
   const handleNext = async (field) => {
@@ -325,14 +299,13 @@ const AdminPage = () => {
                 {/* Skills Queue Cutoff Time */}
                 <Flex direction="column" gap="2">
                   <Text size="2" weight="medium">
-                    Skills queue cutoff time
+                    Skills queue cutoff date/time
                   </Text>
                   <input
-                    type="time"
-                    value={convertTo24Hour(skillsCutoffTime)}
-                    onChange={(e) => {
-                      setSkillsCutoffTime(convertTo12Hour(e.target.value));
-                    }}
+                    type="text"
+                    value={skillsCutoffTime}
+                    onChange={(e) => setSkillsCutoffTime(e.target.value)}
+                    placeholder="2/6 12:00 PM"
                     style={{
                       padding: '8px',
                       borderRadius: '6px',
@@ -341,7 +314,7 @@ const AdminPage = () => {
                     }}
                   />
                   <Text size="1" color="gray">
-                    Queue closes when time-based capacity is full
+                    Format: MM/dd hh:mm AM/PM (e.g., 2/6 12:00 PM)
                   </Text>
                 </Flex>
 
