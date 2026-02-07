@@ -314,7 +314,7 @@ const AdminPage = () => {
                     }}
                   />
                   <Text size="1" color="gray">
-                    Format: MM/dd hh:mm AM/PM (e.g., 2/6 12:00 PM)
+                    Format: MM/dd hh:mm AM/PM (e.g., 2/6 12:00 PM) - Pacific Time
                   </Text>
                 </Flex>
 
