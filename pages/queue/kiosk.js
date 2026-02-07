@@ -128,21 +128,6 @@ const KioskPage = () => {
               <Text size="6" weight="bold" color="red">
                 Skills queue is now closed
               </Text>
-              {queueStatus.reason === 'capacity_full' && (
-                <Text size="3" color="gray">
-                  Queue capacity has been reached for today
-                </Text>
-              )}
-              {queueStatus.reason === 'past_cutoff' && (
-                <Text size="3" color="gray">
-                  Cutoff time has passed
-                </Text>
-              )}
-              {queueStatus.reason === 'permanently_closed' && (
-                <Text size="3" color="gray">
-                  Queue has been closed
-                </Text>
-              )}
             </Flex>
           </Card>
         )}
@@ -155,8 +140,8 @@ const KioskPage = () => {
                 Queue manually opened
               </Text>
             ) : (
-              <Text size="3" color="gray">
-                Remaining spots: <Text weight="bold">{queueStatus.remainingSlots}</Text> / {queueStatus.totalCapacity}
+              <Text size="3" style={{ color: "black" }}>
+                Skills closes at: <Text weight="bold">{queueSettings?.skillsCutoffTime?.replace(/^\d{1,2}\/\d{1,2}\s+/, '') || "N/A"}</Text>, spots remaining: <Text weight="bold">{queueStatus.remainingSlots === Infinity ? "Unlimited" : queueStatus.remainingSlots}</Text>
               </Text>
             )}
           </Flex>

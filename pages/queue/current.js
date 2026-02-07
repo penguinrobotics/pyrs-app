@@ -15,6 +15,7 @@ import {
 } from "@radix-ui/themes";
 import { DoubleArrowUpIcon, ChevronUpIcon } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
+import { calculateQueueStatus } from "../../lib/queueCapacity";
 
 const Marker = ({ color, children }) => {
   return (
@@ -37,14 +38,20 @@ const Marker = ({ color, children }) => {
 };
 
 // Memoized component for "Up Next" table
-const NowServingTable = memo(({ nowServing, flash }) => {
+const NowServingTable = memo(({ nowServing, flashingTeams }) => {
   // Only enable scrolling if there are more than 5 teams (enough to overflow the container)
   const shouldScroll = nowServing.length > 5;
+
+  const isFlashing = (teamNumber) => flashingTeams.has(teamNumber);
+  const rowStyle = (teamNumber) => ({
+    backgroundColor: isFlashing(teamNumber) ? "var(--blue-10)" : "transparent",
+  });
+  const textColor = (teamNumber) => isFlashing(teamNumber) ? "white" : "black";
 
   return (
     <Box
       style={{
-        backgroundColor: flash ? "transparent" : "rgb(0,130,255)",
+        backgroundColor: "var(--blue-5)",
         minHeight: "300px",
         overflow: "hidden",
         position: "relative"
@@ -54,8 +61,8 @@ const NowServingTable = memo(({ nowServing, flash }) => {
       {nowServing.length > 0 ? (
         <>
           {/* Pinned header */}
-          <Box style={{ position: "relative", zIndex: 10, backgroundColor: "rgb(0,130,255)" }}>
-            <Table.Root size="1" variant="ghost" style={{ color: "white", tableLayout: "fixed", width: "100%" }}>
+          <Box style={{ position: "relative", zIndex: 10, backgroundColor: "var(--blue-5)" }}>
+            <Table.Root size="1" variant="ghost" style={{ color: "black", tableLayout: "fixed", width: "100%" }}>
               <colgroup>
                 <col style={{ width: "33.33%" }} />
                 <col style={{ width: "33.33%" }} />
@@ -63,14 +70,14 @@ const NowServingTable = memo(({ nowServing, flash }) => {
               </colgroup>
               <Table.Header>
                 <Table.Row>
-                  <Table.ColumnHeaderCell style={{ color: "white" }}>
-                    <Text size="5" style={{ color: "white" }}>Team #</Text>
+                  <Table.ColumnHeaderCell style={{ color: "black" }}>
+                    <Text size="5" style={{ color: "black" }}>Team #</Text>
                   </Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell style={{ color: "white" }}>
-                    <Text size="5" style={{ color: "white" }}>Field</Text>
+                  <Table.ColumnHeaderCell style={{ color: "black" }}>
+                    <Text size="5" style={{ color: "black" }}>Field</Text>
                   </Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell style={{ color: "white" }}>
-                    <Text size="5" style={{ color: "white" }}>Time Past</Text>
+                  <Table.ColumnHeaderCell style={{ color: "black" }}>
+                    <Text size="5" style={{ color: "black" }}>Time Past</Text>
                   </Table.ColumnHeaderCell>
                 </Table.Row>
               </Table.Header>
@@ -84,7 +91,7 @@ const NowServingTable = memo(({ nowServing, flash }) => {
                 animation: shouldScroll ? "scrollQueue 30s linear infinite" : "none"
               }}
             >
-              <Table.Root size="1" variant="ghost" style={{ color: "white", tableLayout: "fixed", width: "100%" }}>
+              <Table.Root size="1" variant="ghost" style={{ color: "black", tableLayout: "fixed", width: "100%" }}>
                 <colgroup>
                   <col style={{ width: "33.33%" }} />
                   <col style={{ width: "33.33%" }} />
@@ -93,19 +100,19 @@ const NowServingTable = memo(({ nowServing, flash }) => {
                 <Table.Body>
                   {/* First loop of content */}
                   {nowServing.map((team, index) => (
-                    <Table.Row key={`first-${index}`}>
+                    <Table.Row key={`first-${index}`} style={rowStyle(team.number)}>
                       <Table.Cell>
-                        <Text size="7" style={{ color: "white" }} weight="bold">
+                        <Text size="7" style={{ color: textColor(team.number) }} weight="bold">
                           {team.number}
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
-                        <Text size="7" style={{ color: "white" }} weight="bold">
+                        <Text size="7" style={{ color: textColor(team.number) }} weight="bold">
                           {team.field || "-"}
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
-                        <Text size="7" style={{ color: "white" }} weight="bold">
+                        <Text size="7" style={{ color: textColor(team.number) }} weight="bold">
                           <ReactTimeAgo
                             date={team.at ? new Date(team.at) : new Date()}
                             locale="en-US"
@@ -132,19 +139,19 @@ const NowServingTable = memo(({ nowServing, flash }) => {
                   )}
                   {/* Second loop for seamless scrolling - only duplicate if scrolling is enabled */}
                   {shouldScroll && nowServing.map((team, index) => (
-                    <Table.Row key={`second-${index}`}>
+                    <Table.Row key={`second-${index}`} style={rowStyle(team.number)}>
                       <Table.Cell>
-                        <Text size="7" style={{ color: "white" }} weight="bold">
+                        <Text size="7" style={{ color: textColor(team.number) }} weight="bold">
                           {team.number}
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
-                        <Text size="7" style={{ color: "white" }} weight="bold">
+                        <Text size="7" style={{ color: textColor(team.number) }} weight="bold">
                           {team.field || "-"}
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
-                        <Text size="7" style={{ color: "white" }} weight="bold">
+                        <Text size="7" style={{ color: textColor(team.number) }} weight="bold">
                           <ReactTimeAgo
                             date={team.at ? new Date(team.at) : new Date()}
                             locale="en-US"
@@ -162,7 +169,7 @@ const NowServingTable = memo(({ nowServing, flash }) => {
         </>
       ) : (
         <Flex align="center" justify="center" style={{ height: "100%" }}>
-          <Text size="5" style={{ color: "white" }}>No teams up next</Text>
+          <Text size="5" style={{ color: "black" }}>No teams up next</Text>
         </Flex>
       )}
     </Box>
@@ -312,29 +319,33 @@ const JudgingScheduleTable = memo(({ filteredSchedule, getTimeSlotIconButton }) 
 });
 
 const QueuePage = () => {
-  const [flash, setFlash] = useState(false);
+  const [flashingTeams, setFlashingTeams] = useState(new Set());
   const prevNowServingTeams = useRef(new Set());
   const isInitialMount = useRef(true);
   const [judgingSchedule, setJudgingSchedule] = useState([]);
   const [filteredSchedule, setFilteredSchedule] = useState([]);
 
   // Get real-time queue data from WebSocket
-  const { nowServing, queue, isConnected } = usePyrsAppData();
+  const { nowServing, queue, isConnected, queueSettings } = usePyrsAppData();
 
-  let blinkInterval;
+  // Calculate queue status
+  const queueStatus = useMemo(() => {
+    if (!queueSettings) return null;
+    return calculateQueueStatus(queueSettings, { nowServing, queue });
+  }, [queueSettings, nowServing, queue]);
 
-  const flashRed = () => {
+  const flashRows = (newTeams) => {
     let count = 0;
-    blinkInterval = setInterval(() => {
-      setFlash(true);
+    const interval = setInterval(() => {
+      setFlashingTeams(new Set(newTeams));
       setTimeout(() => {
-        setFlash(false);
-      }, 400);
-      if (count++ === 4) clearInterval(blinkInterval);
-    }, 800);
+        setFlashingTeams(new Set());
+      }, 700);
+      if (count++ === 5) clearInterval(interval);
+    }, 1100);
   };
 
-  // Flash red when a new team is added to nowServing
+  // Flash rows when new teams are added to nowServing
   useEffect(() => {
     // Skip flash on initial mount to avoid flashing when loading existing state
     if (isInitialMount.current) {
@@ -346,11 +357,11 @@ const QueuePage = () => {
     const currentTeams = new Set(nowServing.map(t => t.number));
     const previousTeams = prevNowServingTeams.current;
 
-    // Check if there are any new teams that weren't in the previous set
-    const hasNewTeams = Array.from(currentTeams).some(team => !previousTeams.has(team));
+    // Find which teams are new
+    const newTeams = Array.from(currentTeams).filter(team => !previousTeams.has(team));
 
-    if (hasNewTeams && currentTeams.size > 0) {
-      flashRed();
+    if (newTeams.length > 0) {
+      flashRows(newTeams);
     }
 
     prevNowServingTeams.current = currentTeams;
@@ -483,7 +494,7 @@ const QueuePage = () => {
           </Flex>
           <Flex direction="row" gap="6" style={{ flex: 1, overflow: "hidden" }}>
             <Flex width="600px" gap="4" direction="column">
-              <Card style={{ backgroundColor: "rgba(0,130,255,1)" }}>
+              <Card style={{ backgroundColor: "var(--blue-5)" }}>
                 <Inset>
                   <Callout.Root
                     size="1"
@@ -500,7 +511,7 @@ const QueuePage = () => {
                       </Text>
                     </Flex>
                   </Callout.Root>
-                  <NowServingTable nowServing={nowServing} flash={flash} />
+                  <NowServingTable nowServing={nowServing} flashingTeams={flashingTeams} />
                 </Inset>
               </Card>
             </Flex>
@@ -513,11 +524,23 @@ const QueuePage = () => {
                     variant="surface"
                     style={{ justifyContent: "center" }}
                   >
-                    <Flex direction="row" align="center" justify="center" gap="2">
-                      <Text weight="bold" size="5" align="center">
-                        Current Queue
-                      </Text>
-                      <Spinner size="2" />
+                    <Flex direction="column" align="center" justify="center" gap="1">
+                      <Flex direction="row" align="center" justify="center" gap="2">
+                        <Text weight="bold" size="5" align="center">
+                          Current Queue
+                        </Text>
+                        <Spinner size="2" />
+                      </Flex>
+                      {queueStatus && (
+                        <Text size="2" style={{ color: "black" }}>
+                          Skills closes at: <Text weight="bold">{queueSettings?.skillsCutoffTime?.replace(/^\d{1,2}\/\d{1,2}\s+/, '') || "N/A"}</Text>,{" "}
+                          {queueStatus.remainingSlots > 0 ? (
+                            <>spots remaining: <Text weight="bold">{queueStatus.remainingSlots === Infinity ? "Unlimited" : queueStatus.remainingSlots}</Text></>
+                          ) : (
+                            <Text weight="bold" style={{ color: "var(--red-11)" }}>Queue is now closed</Text>
+                          )}
+                        </Text>
+                      )}
                     </Flex>
                   </Callout.Root>
                   <CurrentQueueList queue={queue} getTeamIconButton={getTeamIconButton} />

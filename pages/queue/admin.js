@@ -7,12 +7,13 @@ import {
   Button,
   Card,
   Dialog,
+  DropdownMenu,
   Flex,
   Grid,
   IconButton,
   Inset,
+  Separator,
   Slider,
-  Spinner,
   Switch,
   Table,
   Text,
@@ -24,6 +25,7 @@ import {
   DotsHorizontalIcon,
   GearIcon,
   HomeIcon,
+  SpeakerLoudIcon,
 } from "@radix-ui/react-icons";
 import { usePyrsAppData } from "../../lib/usePyrsAppData";
 import { useTTS, announceTeamServed } from "../../lib/useTTS";
@@ -189,7 +191,7 @@ const AdminPage = () => {
       <Head>
         <title>PYRS App - Queue Admin</title>
       </Head>
-      <Flex direction="column" gap="5">
+      <Flex direction="column" gap="5" px={{ initial: '2', md: '5' }}>
         <Flex direction="row" align="center" justify="center" gap="4" position="relative">
           <IconButton
             size="3"
@@ -265,37 +267,6 @@ const AdminPage = () => {
                   </Text>
                 </Flex>
 
-                {/* Enable/Disable TTS */}
-                <Flex align="center" justify="between">
-                  <Text size="2" weight="medium">
-                    Enable announcements
-                  </Text>
-                  <Switch
-                    checked={ttsEnabled}
-                    onCheckedChange={setTtsEnabled}
-                  />
-                </Flex>
-
-                {/* Volume */}
-                <Flex direction="column" gap="2">
-                  <Flex justify="between">
-                    <Text size="2" weight="medium">
-                      Volume
-                    </Text>
-                    <Text size="2" color="gray">
-                      {Math.round(ttsVolume * 100)}%
-                    </Text>
-                  </Flex>
-                  <Slider
-                    value={[ttsVolume]}
-                    onValueChange={(values) => setTtsVolume(values[0])}
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    disabled={!ttsEnabled}
-                  />
-                </Flex>
-
                 {/* Skills Queue Cutoff Time */}
                 <Flex direction="column" gap="2">
                   <Text size="2" weight="medium">
@@ -314,7 +285,7 @@ const AdminPage = () => {
                     }}
                   />
                   <Text size="1" color="gray">
-                    Format: MM/dd hh:mm AM/PM (e.g., 2/6 12:00 PM) - Pacific Time
+                    Format: MM/dd hh:mm AM/PM (e.g., 2/6 12:00 PM) - Server Local Time
                   </Text>
                 </Flex>
 
@@ -356,6 +327,39 @@ const AdminPage = () => {
                   />
                 </Flex>
 
+                <Separator size="4" />
+
+                {/* Enable/Disable TTS */}
+                <Flex align="center" justify="between">
+                  <Text size="2" weight="medium">
+                    Enable announcements
+                  </Text>
+                  <Switch
+                    checked={ttsEnabled}
+                    onCheckedChange={setTtsEnabled}
+                  />
+                </Flex>
+
+                {/* Volume */}
+                <Flex direction="column" gap="2">
+                  <Flex justify="between">
+                    <Text size="2" weight="medium">
+                      Volume
+                    </Text>
+                    <Text size="2" color="gray">
+                      {Math.round(ttsVolume * 100)}%
+                    </Text>
+                  </Flex>
+                  <Slider
+                    value={[ttsVolume]}
+                    onValueChange={(values) => setTtsVolume(values[0])}
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    disabled={!ttsEnabled}
+                  />
+                </Flex>
+
                 {!tts.isSupported && (
                   <Text size="2" color="red">
                     Text-to-speech is not supported in this browser
@@ -378,12 +382,6 @@ const AdminPage = () => {
         </Flex>
         <Grid columns={{ initial: '1', md: '2' }} gap="6" mt="4">
           <Flex gap="4" direction="column">
-            <Flex direction="row" align="center" justify="center" gap="2">
-              <Text weight="bold" size="7" align="center">
-                Send to field
-              </Text>
-              <img src="/assets/catjump.webp" alt="catjump" width={32} height={32} />
-            </Flex>
             <Grid columns={numberOfFields.toString()} gap="2">
               {Array.from({ length: numberOfFields }, (_, i) => i + 1).map((fieldNum) => (
                 <Button
@@ -401,7 +399,7 @@ const AdminPage = () => {
               <Inset>
                 <Flex
                   direction="column"
-                  style={{ backgroundColor: "rgba(0,130,255, 0.1)" }}
+                  style={{ backgroundColor: "white" }}
                   minHeight="300px"
                 >
                   <Table.Root size="1">
@@ -416,20 +414,41 @@ const AdminPage = () => {
                       </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                      {nowServing.map((team, index) => (
-                        <Table.Row key={index}>
+                      {[...nowServing].sort((a, b) => (a.field || 0) - (b.field || 0)).map((team, index, sorted) => {
+                        const fieldColor = fieldColors[(team.field - 1) % fieldColors.length];
+                        const isFirstOfField = !sorted.slice(0, index).some(t => t.field === team.field);
+                        const shade = isFirstOfField ? 9 : 3;
+                        const darkTextColors = ['yellow', 'amber', 'lime'];
+                        const textColor = isFirstOfField ? (darkTextColors.includes(fieldColor) ? 'black' : 'white') : undefined;
+                        return (
+                        <Table.Row key={index} style={{ backgroundColor: `var(--${fieldColor}-${shade})`, color: textColor }}>
                           <Table.Cell style={{ verticalAlign: 'middle' }}>
-                            <Text size="4" weight="bold">
-                              {team.number}
-                            </Text>
+                            <Button
+                              variant="surface"
+                              color="gray"
+                              highContrast
+                              size="2"
+                              onClick={() => {
+                                announceTeamServed(team, team.field, tts, {
+                                  voice: selectedVoice,
+                                  rate: ttsRate,
+                                  volume: ttsVolume,
+                                });
+                              }}
+                            >
+                              <SpeakerLoudIcon />
+                              <Text size="4" weight="bold">
+                                {team.number}
+                              </Text>
+                            </Button>
                           </Table.Cell>
                           <Table.Cell style={{ verticalAlign: 'middle' }}>
-                            <Text size="4" weight="bold">
+                            <Text size="4" weight="bold" style={{ color: textColor }}>
                               {team.field || "-"}
                             </Text>
                           </Table.Cell>
                           <Table.Cell style={{ verticalAlign: 'middle' }}>
-                            <Box style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                            <Box style={{ fontSize: '16px', fontWeight: 'bold', color: textColor }}>
                               <ReactTimeAgo
                                 date={team.at ? new Date(team.at) : new Date()}
                                 locale="en-US"
@@ -437,65 +456,32 @@ const AdminPage = () => {
                               />
                             </Box>
                           </Table.Cell>
-                          <Table.Cell>
+                          <Table.Cell style={{ verticalAlign: 'middle' }}>
                             <Flex align="center" justify="center">
-                              <Dialog.Root>
-                                <Dialog.Trigger>
-                                  <IconButton size="1" variant="surface">
+                              <DropdownMenu.Root>
+                                <DropdownMenu.Trigger>
+                                  <IconButton size="1" variant="surface" color="gray" highContrast>
                                     <DotsHorizontalIcon />
                                   </IconButton>
-                                </Dialog.Trigger>
-                                <Dialog.Content style={{ maxWidth: 400 }}>
-                                  <Flex direction="row" justify="between" align="top" mb="2">
-                                    <Dialog.Title>Team {team.number}</Dialog.Title>
-                                    <Dialog.Close>
-                                      <IconButton size="1" variant="ghost" color="gray">
-                                        <Cross2Icon />
-                                      </IconButton>
-                                    </Dialog.Close>
-                                  </Flex>
-                                  <Flex direction="column" gap="3">
-                                    <Dialog.Close>
-                                      <Button
-                                        size="3"
-                                        color="crimson"
-                                        variant="soft"
-                                        onClick={() => handleRemove(team.number)}
-                                        style={{ width: '100%' }}
-                                      >
-                                        <Cross2Icon />
-                                        Dequeue team
-                                      </Button>
-                                    </Dialog.Close>
-                                    <Dialog.Close>
-                                      <Button
-                                        size="3"
-                                        variant="soft"
-                                        onClick={() => handleBack(team.number)}
-                                        style={{ width: '100%' }}
-                                      >
-                                        <ChevronRightIcon />
-                                        Send to top of queue
-                                      </Button>
-                                    </Dialog.Close>
-                                    <Dialog.Close>
-                                      <Button
-                                        size="3"
-                                        variant="soft"
-                                        onClick={() => handleBack(team.number, 5)}
-                                        style={{ width: '100%' }}
-                                      >
-                                        <ChevronRightIcon />
-                                        Send back 5 spots
-                                      </Button>
-                                    </Dialog.Close>
-                                  </Flex>
-                                </Dialog.Content>
-                              </Dialog.Root>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Content>
+                                  <DropdownMenu.Item color="crimson" onClick={() => handleRemove(team.number)}>
+                                    <Cross2Icon /> Dequeue
+                                  </DropdownMenu.Item>
+                                  <DropdownMenu.Separator />
+                                  <DropdownMenu.Item onClick={() => handleBack(team.number)}>
+                                    <ChevronRightIcon /> Send to top
+                                  </DropdownMenu.Item>
+                                  <DropdownMenu.Item onClick={() => handleBack(team.number, 5)}>
+                                    <ChevronRightIcon /> Send back 5
+                                  </DropdownMenu.Item>
+                                </DropdownMenu.Content>
+                              </DropdownMenu.Root>
                             </Flex>
                           </Table.Cell>
                         </Table.Row>
-                      ))}
+                        );
+                      })}
                     </Table.Body>
                   </Table.Root>
                 </Flex>
@@ -504,13 +490,7 @@ const AdminPage = () => {
           </Flex>
 
           <Flex gap="4" direction="column" width="100%">
-            <Flex direction="row" gap="2" align="center" justify="center">
-              <Text weight="bold" size="7" align="center">
-                Current Queue
-              </Text>
-              {!isConnected && <Spinner size="3" />}
-            </Flex>
-            <Card>
+<Card>
               <Inset>
                 <Box minHeight="300px" px="4">
                   <ol>
