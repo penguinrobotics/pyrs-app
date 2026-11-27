@@ -33,11 +33,7 @@ for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
     if /i "%%A"=="PORT" set "PORT=%%B"
 )
 
-if not defined CADDY_DOMAIN (
-    echo [ERROR] CADDY_DOMAIN is not set in .env
-    pause
-    exit /b 1
-)
+if not defined CADDY_DOMAIN set "CADDY_DOMAIN=*.penguinrobotics.ca"
 if not defined CLOUDFLARE_API_TOKEN (
     echo [ERROR] CLOUDFLARE_API_TOKEN is not set in .env
     pause

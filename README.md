@@ -85,13 +85,13 @@ npm start
 
 ### HTTPS with Caddy on Windows (Let's Encrypt via Cloudflare DNS-01)
 
-To serve the app over HTTPS (`https://` and `wss://`) on Windows with an automatic Let's Encrypt certificate—even on a private/LAN tournament network without exposing ports 80/443 to the internet—use the included Caddy configuration in `caddy/`.
+To serve the app over HTTPS (`https://` and `wss://`) on Windows with an automatic Let's Encrypt wildcard certificate (`*.penguinrobotics.ca`)—even on a private/LAN tournament network without exposing ports 80/443 to the internet—use the included Caddy configuration in `caddy/`.
 
 #### Prerequisites
 1. **Cloudflare API Token**: In the Cloudflare dashboard, go to **My Profile → API Tokens → Create Token → Custom token** with:
    - **Permissions**: `Zone` → `Zone` → `Read` and `Zone` → `DNS` → `Edit`
    - **Zone Resources**: `Include` → `Specific zone` → `penguinrobotics.ca`
-2. **DNS Record**: Point your chosen hostname (e.g., `pyrs.penguinrobotics.ca`) to this Windows machine's LAN IP using either a **DNS-only** (grey cloud) `A` record in Cloudflare or a local DNS entry on your tournament router.
+2. **DNS Record**: Point your subdomain(s) (e.g., `pyrs.penguinrobotics.ca`) to this Windows machine's LAN IP using either a **DNS-only** (grey cloud) `A` record in Cloudflare or a local DNS entry on your tournament router.
 
 #### Setup
 1. Download the Windows Caddy binary with the `caddy-dns/cloudflare` plugin bundled:
@@ -103,7 +103,7 @@ To serve the app over HTTPS (`https://` and `wss://`) on Windows with an automat
 2. Copy `.env.example` to `.env` and configure:
    ```env
    PORT=3000
-   CADDY_DOMAIN=pyrs.penguinrobotics.ca
+   CADDY_DOMAIN=*.penguinrobotics.ca
    CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
    ```
    *(Make sure `PORT` is not `80`, since Caddy binds ports `80` and `443` and proxies HTTP and WebSocket `/ws` traffic to `127.0.0.1:PORT`.)*

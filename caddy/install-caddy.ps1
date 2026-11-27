@@ -42,7 +42,7 @@ if ($modules -match 'dns\.providers\.cloudflare') {
 
 Write-Host "`n--- Next Steps ---" -ForegroundColor Yellow
 Write-Host '1. Create a Cloudflare API token for penguinrobotics.ca with Zone:Zone:Read and Zone:DNS:Edit.'
-Write-Host '2. Copy .env.example to .env and set PORT=3000, CADDY_DOMAIN (e.g. pyrs.penguinrobotics.ca), and CLOUDFLARE_API_TOKEN.'
-Write-Host '3. Point your domain to this machine''s LAN IP (via a DNS-only Cloudflare A record or your local router DNS).'
+Write-Host '2. Copy .env.example to .env and set PORT=3000, CADDY_DOMAIN=*.penguinrobotics.ca, and CLOUDFLARE_API_TOKEN.'
+Write-Host '3. Point a subdomain (e.g. pyrs.penguinrobotics.ca) to this machine''s LAN IP (via a DNS-only Cloudflare A record or your local router DNS).'
 Write-Host '4. Ensure Windows Firewall allows inbound TCP ports 80 and 443 for LAN clients.'
 Write-Host '5. Start Caddy with caddy\start-caddy.bat (or run pyrs-app-start.bat to launch both Node and Caddy).'
