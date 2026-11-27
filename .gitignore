@@ -37,3 +37,4 @@ data/queue_data.json
 data/referee_data.json
 data/judging_schedule.json
 .env
+caddy/*.exe

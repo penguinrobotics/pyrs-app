@@ -83,6 +83,41 @@ Start the production server:
 npm start
 ```
 
+### HTTPS with Caddy on Windows (Let's Encrypt via Namecheap DNS-01)
+
+To serve the app over HTTPS (`https://` and `wss://`) on Windows with an automatic Let's Encrypt certificate—even on a private/LAN tournament network without exposing ports 80/443 to the internet—use the included Caddy configuration in `caddy/`.
+
+#### Prerequisites
+1. **Namecheap API Access**: Enable API access in Namecheap under **Profile → Tools → Namecheap API Access** (note: Namecheap requires 20+ domains, a $50+ account balance, or $50+ spent in the last 2 years).
+2. **Whitelist Public IPv4**: Add the server's current public IPv4 address to your Namecheap API **Whitelisted IPs** list. *(Tip: if your Namecheap account doesn't meet the API threshold or your venue IP changes frequently, you can keep the domain registered at Namecheap and point its nameservers to Cloudflare's free DNS, then swap the Caddy plugin to `github.com/caddy-dns/cloudflare`.)*
+
+#### Setup
+1. Download the Windows Caddy binary with the `caddy-dns/namecheap` plugin bundled:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File caddy\install-caddy.ps1
+   ```
+   This saves `caddy\caddy.exe` (gitignored) and prints your current public IPv4 to whitelist in Namecheap.
+
+2. Copy `.env.example` to `.env` and configure:
+   ```env
+   PORT=3000
+   CADDY_DOMAIN=queue.pyrs.ca
+   NAMECHEAP_API_USER=your_namecheap_username
+   NAMECHEAP_API_KEY=your_namecheap_api_key
+   ```
+   *(Make sure `PORT` is not `80`, since Caddy binds ports `80` and `443` and proxies to `127.0.0.1:PORT`.)*
+
+3. Allow inbound HTTP/HTTPS traffic in Windows Firewall (run in an elevated PowerShell prompt):
+   ```powershell
+   New-NetFirewallRule -DisplayName "PYRS Caddy HTTP/HTTPS" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow
+   ```
+
+4. Start the app and Caddy proxy:
+   - Run `pyrs-app-start.bat` — it automatically launches both the Next.js server and `caddy\start-caddy.bat` when `caddy\caddy.exe` is present.
+   - Or start Caddy standalone with `caddy\start-caddy.bat`.
+
+> **Tip:** When testing for the first time, uncomment the Let's Encrypt staging `acme_ca` line in `caddy/Caddyfile` to avoid hitting production rate limits, then switch back once certificate issuance succeeds.
+
 ## Pages
 
 ### Kiosk (`/queue/kiosk`)
