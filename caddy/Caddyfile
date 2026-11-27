@@ -1,13 +1,12 @@
 # Caddy reverse proxy configuration for PYRS Queue Management System (Windows)
-# Uses Let's Encrypt with Namecheap DNS-01 challenge so TLS certificates can be
+# Uses Let's Encrypt with Cloudflare DNS-01 challenge so TLS certificates can be
 # issued even on private/LAN tournament networks without exposing ports 80/443.
 #
 # Required environment variables (loaded via `caddy run --envfile .env`):
-#   CADDY_DOMAIN       - Hostname to serve over HTTPS (e.g. queue.pyrs.ca)
-#   NAMECHEAP_API_USER - Namecheap account username
-#   NAMECHEAP_API_KEY  - Namecheap API key
+#   CADDY_DOMAIN         - Hostname to serve over HTTPS (e.g. pyrs.penguinrobotics.ca)
+#   CLOUDFLARE_API_TOKEN - Cloudflare scoped API token (Zone:Zone:Read + Zone:DNS:Edit)
 # Optional:
-#   PORT               - Internal Node.js server port (defaults to 3000)
+#   PORT                 - Internal Node.js server port (defaults to 3000)
 
 {
 	# Explicitly use Let's Encrypt production CA.
@@ -18,14 +17,7 @@
 
 {$CADDY_DOMAIN} {
 	tls {
-		dns namecheap {
-			api_key {env.NAMECHEAP_API_KEY}
-			user {env.NAMECHEAP_API_USER}
-			api_endpoint https://api.namecheap.com/xml.response
-			# Public IPv4 is auto-detected if omitted. Uncomment to pin a specific
-			# whitelisted IPv4 address from your Namecheap API settings:
-			# client_ip {env.NAMECHEAP_CLIENT_IP}
-		}
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 		# Query public resolvers for TXT record propagation checks so local/LAN
 		# split-horizon DNS overrides do not interfere with DNS-01 validation.
 		resolvers 1.1.1.1 8.8.8.8
