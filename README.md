@@ -91,7 +91,7 @@ To serve the app over HTTPS (`https://` and `wss://`) on Windows with an automat
 1. **Cloudflare API Token**: In the Cloudflare dashboard, go to **My Profile → API Tokens → Create Token → Custom token** with:
    - **Permissions**: `Zone` → `Zone` → `Read` and `Zone` → `DNS` → `Edit`
    - **Zone Resources**: `Include` → `Specific zone` → `penguinrobotics.ca`
-2. **DNS Record**: Point your subdomain(s) (e.g., `pyrs.penguinrobotics.ca`) to this Windows machine's LAN IP using either a **DNS-only** (grey cloud) `A` record in Cloudflare or a local DNS entry on your tournament router.
+2. **Local DNS Record**: Point `app.penguinrobotics.ca` to this Windows machine's LAN IP in your tournament router's local DNS (or a DNS-only / grey-cloud `A` record in Cloudflare).
 
 #### Setup
 1. Download the Windows Caddy binary with the `caddy-dns/cloudflare` plugin bundled:
