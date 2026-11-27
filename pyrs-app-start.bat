@@ -87,6 +87,12 @@ echo Starting server...
 REM Start the Next.js server in a new window
 start "PYRS Server" cmd /k npm run prod
 
+REM Start Caddy HTTPS reverse proxy if installed
+if exist "%~dp0caddy\caddy.exe" (
+    echo Starting Caddy HTTPS reverse proxy...
+    start "PYRS Caddy Proxy" cmd /k "%~dp0caddy\start-caddy.bat"
+)
+
 REM Wait for server to start
 echo Waiting for server to start...
 timeout /t 8 /nobreak

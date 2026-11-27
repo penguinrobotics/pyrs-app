@@ -83,6 +83,42 @@ Start the production server:
 npm start
 ```
 
+### HTTPS with Caddy on Windows (Let's Encrypt via Cloudflare DNS-01)
+
+To serve the app over HTTPS (`https://` and `wss://`) on Windows with an automatic Let's Encrypt wildcard certificate (`*.penguinrobotics.ca`)—even on a private/LAN tournament network without exposing ports 80/443 to the internet—use the included Caddy configuration in `caddy/`.
+
+#### Prerequisites
+1. **Cloudflare API Token**: In the Cloudflare dashboard, go to **My Profile → API Tokens → Create Token → Custom token** with:
+   - **Permissions**: `Zone` → `Zone` → `Read` and `Zone` → `DNS` → `Edit`
+   - **Zone Resources**: `Include` → `Specific zone` → `penguinrobotics.ca`
+2. **Local DNS Record**: Point `app.penguinrobotics.ca` to this Windows machine's LAN IP in your tournament router's local DNS (or a DNS-only / grey-cloud `A` record in Cloudflare).
+
+#### Setup
+1. Download the Windows Caddy binary with the `caddy-dns/cloudflare` plugin bundled:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File caddy\install-caddy.ps1
+   ```
+   This saves `caddy\caddy.exe` (gitignored) and verifies the Cloudflare DNS module.
+
+2. Copy `.env.example` to `.env` and configure:
+   ```env
+   PORT=3000
+   CADDY_DOMAIN=*.penguinrobotics.ca
+   CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+   ```
+   *(Make sure `PORT` is not `80`, since Caddy binds ports `80` and `443` and proxies HTTP and WebSocket `/ws` traffic to `127.0.0.1:PORT`.)*
+
+3. Allow inbound HTTP/HTTPS traffic in Windows Firewall (run in an elevated PowerShell prompt):
+   ```powershell
+   New-NetFirewallRule -DisplayName "PYRS Caddy HTTP/HTTPS" -Direction Inbound -Protocol TCP -LocalPort 80,443 -Action Allow
+   ```
+
+4. Start the app and Caddy proxy:
+   - Run `pyrs-app-start.bat` — it automatically launches both the Next.js server and `caddy\start-caddy.bat` when `caddy\caddy.exe` is present.
+   - Or start Caddy standalone with `caddy\start-caddy.bat`.
+
+> **Tip:** When testing for the first time, uncomment the Let's Encrypt staging `acme_ca` line in `caddy/Caddyfile` to avoid hitting production rate limits, then switch back once certificate issuance succeeds.
+
 ## Pages
 
 ### Kiosk (`/queue/kiosk`)

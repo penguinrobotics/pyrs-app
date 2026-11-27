@@ -1,0 +1,38 @@
+# Caddy reverse proxy configuration for PYRS Queue Management System (Windows)
+# Uses Let's Encrypt with Cloudflare DNS-01 challenge to issue a wildcard TLS
+# certificate (*.penguinrobotics.ca) even on private/LAN tournament networks
+# without exposing ports 80/443 to the internet.
+#
+# Required environment variables (loaded via `caddy run --envfile .env`):
+#   CLOUDFLARE_API_TOKEN - Cloudflare scoped API token (Zone:Zone:Read + Zone:DNS:Edit)
+# Optional:
+#   CADDY_DOMAIN         - Wildcard cert site address (defaults to *.penguinrobotics.ca)
+#   PORT                 - Internal Node.js server port (defaults to 3000)
+
+{
+	# Explicitly use Let's Encrypt production CA.
+	# While testing your setup, uncomment the staging CA below to avoid rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
+
+{$CADDY_DOMAIN:*.penguinrobotics.ca} {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		# Query public resolvers for TXT record propagation checks so local/LAN
+		# split-horizon DNS overrides do not interfere with DNS-01 validation.
+		resolvers 1.1.1.1 8.8.8.8
+	}
+
+	encode zstd gzip
+
+	@app host app.penguinrobotics.ca
+	handle @app {
+		# Reverse proxy HTTP and WebSocket (/ws) traffic to the local Next.js server
+		reverse_proxy 127.0.0.1:{$PORT:3000}
+	}
+
+	handle {
+		abort
+	}
+}
